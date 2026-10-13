@@ -11,7 +11,7 @@ The home companion breathes, blinks, looks around and occasionally waves; first-
 
 ## First-run home
 
-The home guides new users through Wi-Fi/time synchronization and shift setup.
+The home guides new users through network or phone time synchronization and shift setup.
 OK opens the next task; UP opens network settings and DOWN opens shift settings.
 Saving either shift time confirms the displayed start/end pair and persists a
 completion flag. Saving brightness alone does not complete shift setup.
@@ -28,12 +28,12 @@ Hold DOWN continuously for five seconds
 to enter a full-screen 5–4–3–2–1 countdown and go straight to early celebration;
 releasing early cancels. On early celebration, UP/DOWN releases confetti, short OK opens the
 off-duty home, and long OK opens Settings. This home shows elapsed free time and a relaxed companion;
-DOWN starts a full-screen pet relaxation scene and OK opens Settings. UP opens the end-time picker. Resuming uses
+DOWN starts a full-screen pet relaxation scene and OK opens Settings. UP opens the continue-work/overtime choice. Resuming uses
 the current calibrated time, not the moment the break began. Early exit is a
 temporary state in RAM and does not change or persist the scheduled end time.
 The regular final-minute launch is suppressed while already in early exit.
 
-Settings contains start/end times, brightness, volume, one six-choice screen-off selector,
+Settings displays the application version and contains start/end/waiting times, brightness, volume, one six-choice screen-off selector,
 automatic break scenes, Wi-Fi setup,
 manual synchronization, synchronization status, Forget Network, and Return.
 UP/DOWN selects a row. OK enters editing; UP/DOWN adjusts and OK saves.
@@ -71,6 +71,48 @@ UTC to `esp_timer_get_time()`. UI refresh delays do not accumulate countdown
 error. Disconnected operation retains this anchor until reboot. An unsynchronized
 boot shows a waiting state, never a fabricated countdown. Offline drift and network
 time accuracy require measurements; this is not a submillisecond timing guarantee.
+
+## Continue work and overtime
+
+From the off-duty home, UP opens a two-option page. Continue work adjusts the daily end time in half-hour steps and saves it to device settings. Overtime starts a separate 30-minute to 8-hour session, adjusted in half-hour steps; it does not change daily start/end settings. The picker displays duration and expected end time, including the next-day label.
+
+The overtime home shows its own remaining time and progress (below 100% until completion). The existing final-minute animation and mood-themed completion receipt apply to overtime. Short DOWN keeps the three-second break; holding DOWN for five seconds finishes the session early. Short OK on completion opens the off-duty home; long OK still opens settings.
+
+A separate `overtime` NVS record stores session start/end. Wi-Fi loss preserves counting; after a reboot, fresh network or phone calibration restores the session. A completed session retains its receipt until the next scheduled shift begins. Continuing daily work clears the overtime record together with the settings save. Daily schedule values and partitions are retained. Physical reboot/resume, buttons, sound and display acceptance remain pending.
+
+## Waiting for work and completed-page retention
+
+The waiting transition follows shift order: current start, current end, waiting, next start. The default is one hour before the next start (09:00–18:00 defaults to next-day 08:00; 22:00–06:00 defaults to 21:00). Changing either daily start or end recalculates waiting. When the rest interval is shorter than an hour, the default is the shift end; the completion state is observed before waiting starts. Manual half-hour adjustment only offers times from the current end up to, but excluding, the next start. Device settings group all three time rows first; the phone form groups them before display/audio preferences and updates the wait field immediately on start/end changes. Invalid phone submissions are rejected server-side as well.
+
+An active overnight shift or overtime session is not interrupted. Explicit continue-work changes update daily waiting, while independent overtime does not alter the daily plan. Legacy 12/14-byte settings retain other preferences; an absent `waitv` marker recalculates the new default on load, and future saves mark this migration complete. The settings blob size remains 14 bytes and partitions remain unchanged. Cached phone pages must be refreshed to load the new linkage script.
+
+## Three-second startup
+
+Power-on shows only the approved startup design for 3 seconds: cream background, the OFF DUTY CLUB brand and Chinese subtitle, the application title, animated coral question mark, and the existing pet sliding in, waving and hopping. Layout and keyframe timings follow the interaction preview; small caption/question font subsets and the existing Flash pet image keep RAM bounded. The LVGL task continues rendering while the application waits in short scheduler delays.
+
+After the startup interval, the application initializes its services and displays the appropriate setup, waiting, work, or completed page. Buttons are registered after the splash; any key still held during initialization is consumed until release to prevent a queued action. Screen-off wake does not replay the splash; a cold start or reboot does.
+
+## Offline time recovery
+
+A previously calibrated device continues counting down when Wi-Fi disconnects;
+reconnection retries do not clear its monotonic clock anchor. After a power-off
+or restart, the anchor is deliberately invalid until a fresh sample arrives.
+Saved shift preferences alone cannot establish the current time.
+
+The time guidance screen opens the existing private hotspot for both Wi-Fi setup
+and phone calibration. The phone page has a "Use phone time" form: a small
+hash-authorized local script samples `Date.now()` at submission, without an
+Internet request. The AP-only, session-token-protected `/time` endpoint validates
+an exact millisecond timestamp in 2025–2099 and queues calibration in the network
+worker. Queue waiting time is included when advancing the clock; transport
+latency and the phone's own clock error remain unmeasured. Time source appears
+in Settings and phone status; the work home shows offline continuation.
+
+Wi-Fi SNTP samples replace phone calibration when available. Completion effects
+are guarded by the latest celebrated end timestamp, and final-second tones only
+advance, so backward calibration cannot replay a completed deadline. No BLE,
+new NVS fields, partition changes or fabricated saved-time recovery is added.
+The screen-off feature only turns off backlight; it does not discard the anchor.
 
 ## Assets and validation
 
@@ -133,8 +175,28 @@ DOWN on the off-duty home now starts one of six full-screen pet motions: stretch
 
 Pet images are cached in Flash to avoid per-frame transparent-layer allocations within the 48 KB LVGL pool. Host rendering covers all 48 mood/action combinations, Chinese glyphs, partial/full frame equality and animation cleanup. Button timing and six-way selection have pure host checks. Confetti uses a fresh hardware random seed per burst for position, entry delay, shape and color; fragments are about 15 percent smaller. Existing saved settings and partitions are unchanged. Physical animation, glyph alignment, sound and button behavior require acceptance of this new build.
 
-## Current validation
+## Phone settings layout and inline feedback
 
-Build: PASS. Host tests: PASS, including production LVGL rendering and glyph coverage. Verified full-image identity: `fff5dbde84242e9ea7438b2d27b2fbdd7241ec219e0aede5b2630ba1cc7dd00f`; matching ELF: `6f3ec10f0eea309c8a00ff74e3c12444bbd969398ff992f1ce12d5fe215f3587`.
+The phone portal now separates offline phone clock sync and online Wi-Fi setup into mutually exclusive views without numbered steps. Both share the daily schedule and preferences. Compact status content replaces the full-height status iframe; native time fields have bounded widths for narrow phones. Form submissions remain on the current page, show a loading indicator, then poll the device for saved, failed, connected, or newly calibrated state. HTTP acceptance alone does not report a completed save or clock sync. Scan results update only the Wi-Fi panel; preference edits remain intact. Missing connectivity times out with an unconfirmed-result message. CSP permits only same-origin requests and the exact script hash; AP access and token validation remain required.
 
-Authorized segmented flashing wrote only bootloader `0x0` and application `0x10000`, verified both image hashes and retained the original partition table byte-for-byte. The application is 2,568,880 bytes and fits the installed 3 MB factory partition. Device tests: NOT RUN beyond flash/partition verification; USB disappeared after reset and did not reappear within the bounded observation. Startup logs, physical full-screen animations, text alignment, sound, settings retention and smoothness remain unverified. Raw logs and generated firmware/debug bundles stay outside Git.
+Resuming work clears active break animations and restarts the automatic egg cooldown. Short OK clears break state before opening settings. Both resume paths were verified in the browser; the reported unexpected-page scenario was not reproduced there. iPhone Safari layout and physical button behavior require device acceptance.
+
+## Device confirmation for phone operations
+
+Phone preference saves now show a three-second device footer confirming success or failure after the application storage result. Each applied phone-time request advances a revision, so repeated calibration also shows a fresh three-second confirmation. These operations wake an idle screen and retain the current page and running countdown. The footer replaces bottom helper content temporarily, preserving the QR code and portal address. Rendering tests verify the QR/address region is unchanged and dismissal restores the full original frame. Wi-Fi options now show only escaped SSID names; signal sorting and connection validation remain unchanged.
+
+## Phone password visibility
+
+Scanned and manual Wi-Fi forms mask passwords by default. Independent show/hide buttons change only the input type and never submit the form. Delegated handlers keep the buttons working after scan results replace the network panel.
+
+## Not open yet waiting page
+
+The accepted poster design replaces the circular charging page: two-line heading, a five-degree diagonal countdown band, pet at the right, and aligned charging labels, ten-segment progress, start time and button hints below. UP retains the eight-mood cycle and now changes the waiting palette, pet body/expression and dedicated pre-work caption together. Work-page palettes and captions remain separate. Long waits use a 24 px HH:MM:SS clock; ordinary waits use 45 px MM:SS. The 29 px heading has its own glyph subset, and the 8 px mood header uses a verified Chinese font. Small text layers rotate within the 48 KB LVGL pool; overlapping background triangles avoid a visible seam without allocating a full-screen layer.
+
+## Version and current validation
+
+The application version is `1.0.0`, defined once in `main/offduty_version.h`. The ESP-IDF application descriptor, device settings header and phone settings header use this value. The version is read-only and does not change saved preferences.
+
+Build: PASS. Host tests: PASS, including Chinese glyph coverage, 40 waiting-page frames, long countdowns, palette/pet matching, settings alignment, phone version output and partial/full rendering. Verified archive: `build/firmware/979ea53ed367a0857c7e392235e5ed747ec4b1c81150f2cbe348b72f23605fbd/`; ELF SHA-256 `97ca16a07f5bae5ee50b730ece620146f4e35ab49f69a7ce424e062431c1ac8b`. The application is 2,800,032 bytes and fits the installed 3 MiB partition.
+
+Device tests: PASS for segmented bootloader/application flashing, unchanged-partition verification and a 35-second startup check. The running application reports version `1.0.0` and matching ELF prefix `97ca16a07`; the splash lasted 3,087 ms, with no errors or crash markers. The serial monitor is closed. Unverified: physical text alignment, eight-mood switching, animation smoothness, phone Safari layout and automatic work-start transition. Use verified bootloader/app components at `0x0`/`0x10000` when retaining the installed partition table and settings; do not flash the merged image for this workflow.

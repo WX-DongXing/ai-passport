@@ -5,9 +5,10 @@
 #include "offduty_model.h"
 
 typedef struct {
-    bool connected, synced, portal, failed, phone_connected, connecting;
+    bool connected, synced, phone_time, portal, failed, phone_connected, connecting;
     int64_t utc_us, sync_age_us;
     int portal_seconds;
+    unsigned phone_revision;
     char ap_name[24], ap_password[17];
 } od_network_t;
 typedef enum { OD_NET_SETUP, OD_NET_CLOSE, OD_NET_SYNC, OD_NET_FORGET } od_net_action_t;

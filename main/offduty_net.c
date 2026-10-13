@@ -19,8 +19,8 @@
 #include <string.h>
 
 typedef struct { char ssid[33], password[65]; } credentials_t;
-typedef enum { CMD_SETUP,CMD_CLOSE,CMD_SYNC,CMD_FORGET,CMD_CREDENTIALS,CMD_IP,CMD_LOST,CMD_SCAN } command_id_t;
-typedef struct { command_id_t id; credentials_t credentials; } command_t;
+typedef enum { CMD_SETUP,CMD_CLOSE,CMD_SYNC,CMD_FORGET,CMD_CREDENTIALS,CMD_IP,CMD_LOST,CMD_SCAN,CMD_PHONE_TIME } command_id_t;
+typedef struct { command_id_t id; credentials_t credentials; int64_t utc_us,mono_us; } command_t;
 static QueueHandle_t s_queue;
 static bool s_ready;
 static portMUX_TYPE s_mux=portMUX_INITIALIZER_UNLOCKED;
@@ -35,7 +35,7 @@ static nvs_handle_t s_nvs;
 static od_settings_t s_settings,s_pending_settings;
 static bool s_settings_pending,s_settings_saved;
 static od_wifi_list_t s_wifi;
-static unsigned s_save_result;
+static unsigned s_save_result,s_connection_revision;
 
 void od_net_settings_snapshot(const od_settings_t *settings,bool saved) {
     portENTER_CRITICAL(&s_mux);s_settings=*settings;s_settings_saved=saved;
@@ -49,10 +49,10 @@ bool od_net_take_settings(od_settings_t *settings) {
 }
 
 void od_net_snapshot(od_network_t *out) {
-    int64_t now=esp_timer_get_time();
     portENTER_CRITICAL(&s_mux);
+    int64_t now=esp_timer_get_time();
     *out=s_state;
-    out->utc_us=s_state.synced?s_utc_anchor+now-s_mono_anchor:0;
+    out->utc_us=s_state.synced?od_clock_utc(s_utc_anchor,s_mono_anchor,now):0;
     out->sync_age_us=s_state.synced?now-s_mono_anchor:0;
     out->portal_seconds=s_state.portal?(int)((s_portal_end-now+999999)/1000000):0;
     portEXIT_CRITICAL(&s_mux);
@@ -62,7 +62,7 @@ static void synced(struct timeval *tv) {
     int64_t utc=(int64_t)tv->tv_sec*1000000+tv->tv_usec;
     if(utc<INT64_C(1735689600000000)) return;
     portENTER_CRITICAL(&s_mux);
-    s_utc_anchor=utc; s_mono_anchor=esp_timer_get_time(); s_state.synced=true;
+    s_utc_anchor=utc; s_mono_anchor=esp_timer_get_time(); s_state.synced=true;s_state.phone_time=false;
     portEXIT_CRITICAL(&s_mux);
 }
 static void event(void *arg,esp_event_base_t base,int32_t id,void *data) {
@@ -96,7 +96,7 @@ static bool phone_emit(void *ctx,const char *html) {
 static void phone_headers(httpd_req_t *req) {
     httpd_resp_set_type(req,"text/html; charset=utf-8");
     httpd_resp_set_hdr(req,"Cache-Control","no-store");
-    httpd_resp_set_hdr(req,"Content-Security-Policy","default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-src 'self'; frame-ancestors 'none'");
+    httpd_resp_set_hdr(req,"Content-Security-Policy","default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; connect-src 'self'; frame-src 'self'; script-src '" OD_PHONE_CLOCK_HASH "'; frame-ancestors 'none'");
 }
 static esp_err_t notice(httpd_req_t *req,const char *message,bool refresh) {
     phone_headers(req);
@@ -119,12 +119,17 @@ static esp_err_t status_page(httpd_req_t *req) {
     if(!local_request(req))return httpd_resp_send_err(req,HTTPD_403_FORBIDDEN,"AP only");
     od_network_t net;od_net_snapshot(&net);unsigned result;
     portENTER_CRITICAL(&s_mux);
+    int64_t revision=s_mono_anchor;unsigned connection_revision=s_connection_revision;
     result=s_save_result?s_save_result:(s_settings_saved?OD_PHONE_SAVED:OD_PHONE_UNSAVED);
     portEXIT_CRITICAL(&s_mux);
     phone_headers(req);
+    char clock_revision[24];snprintf(clock_revision,sizeof(clock_revision),"%lld",(long long)revision);
+    httpd_resp_set_hdr(req,"X-Clock-Revision",clock_revision);
+    char wifi_revision[16];snprintf(wifi_revision,sizeof(wifi_revision),"%u",connection_revision);
+    httpd_resp_set_hdr(req,"X-Wifi-Revision",wifi_revision);
     httpd_resp_set_hdr(req,"Content-Security-Policy","default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");
     httpd_resp_set_hdr(req,"Refresh","3");
-    if(!od_phone_status(phone_emit,req,net.connected,net.synced,net.connecting,net.failed,result))return ESP_FAIL;
+    if(!od_phone_status(phone_emit,req,net.connected,net.synced,net.connecting,net.failed,net.phone_time,result))return ESP_FAIL;
     return httpd_resp_send_chunk(req,NULL,0);
 }
 static esp_err_t scan_request(httpd_req_t *req) {
@@ -183,6 +188,17 @@ static esp_err_t control(httpd_req_t *req) {
     if(!od_net_action(forget?OD_NET_FORGET:OD_NET_SYNC))return httpd_resp_send_err(req,HTTPD_500_INTERNAL_SERVER_ERROR,"Busy; retry");
     return notice(req,forget?"忘记网络请求已提交，请查看设备状态。热点将关闭。":"对时请求已提交，请返回设置刷新查看结果。",false);
 }
+static esp_err_t phone_time(httpd_req_t *req) {
+    if(!local_request(req))return httpd_resp_send_err(req,HTTPD_403_FORBIDDEN,"AP only");
+    if(req->content_len!=56)return httpd_resp_send_err(req,HTTPD_400_BAD_REQUEST,"Invalid length");
+    char body[57];int read=0;command_t cmd={.id=CMD_PHONE_TIME};
+    while(read<56){int n=httpd_req_recv(req,body+read,56-read);if(n<=0)return httpd_resp_send_err(req,HTTPD_400_BAD_REQUEST,"Incomplete form");read+=n;}
+    body[read]=0;
+    if(!od_phone_time_form(body,s_token,&cmd.utc_us))return httpd_resp_send_err(req,HTTPD_400_BAD_REQUEST,"Invalid time or token; refresh and retry");
+    cmd.mono_us=esp_timer_get_time();
+    if(xQueueSend(s_queue,&cmd,0)!=pdTRUE)return httpd_resp_send_err(req,HTTPD_500_INTERNAL_SERVER_ERROR,"Busy; retry");
+    return notice(req,"手机校时已提交，下方状态会自动确认。校准后可关闭热点，离线继续倒计时。",false);
+}
 static void close_portal(void) {
     if(s_server) { httpd_stop(s_server); s_server=NULL; }
     portENTER_CRITICAL(&s_mux); s_state.portal=false;s_state.phone_connected=false;s_wifi.scanning=false; memset(s_state.ap_password,0,sizeof(s_state.ap_password)); portEXIT_CRITICAL(&s_mux);
@@ -202,8 +218,8 @@ static void setup(void) {
     httpd_config_t config=HTTPD_DEFAULT_CONFIG(); config.stack_size=6144; config.max_open_sockets=2; config.lru_purge_enable=true;
     config.recv_wait_timeout=3; config.send_wait_timeout=3;
     if(httpd_start(&s_server,&config)!=ESP_OK) { close_portal(); set_failed(true); return; }
-    httpd_uri_t get={.uri="/",.method=HTTP_GET,.handler=page},post={.uri="/wifi",.method=HTTP_POST,.handler=submit},settings_post={.uri="/settings",.method=HTTP_POST,.handler=submit_settings},control_post={.uri="/control",.method=HTTP_POST,.handler=control},scan_post={.uri="/scan",.method=HTTP_POST,.handler=scan_request},status_get={.uri="/status",.method=HTTP_GET,.handler=status_page};
-    if(httpd_register_uri_handler(s_server,&get)!=ESP_OK || httpd_register_uri_handler(s_server,&post)!=ESP_OK || httpd_register_uri_handler(s_server,&settings_post)!=ESP_OK || httpd_register_uri_handler(s_server,&control_post)!=ESP_OK || httpd_register_uri_handler(s_server,&scan_post)!=ESP_OK || httpd_register_uri_handler(s_server,&status_get)!=ESP_OK) { close_portal(); set_failed(true); return; }
+    httpd_uri_t get={.uri="/",.method=HTTP_GET,.handler=page},post={.uri="/wifi",.method=HTTP_POST,.handler=submit},settings_post={.uri="/settings",.method=HTTP_POST,.handler=submit_settings},control_post={.uri="/control",.method=HTTP_POST,.handler=control},scan_post={.uri="/scan",.method=HTTP_POST,.handler=scan_request},status_get={.uri="/status",.method=HTTP_GET,.handler=status_page},time_post={.uri="/time",.method=HTTP_POST,.handler=phone_time};
+    if(httpd_register_uri_handler(s_server,&get)!=ESP_OK || httpd_register_uri_handler(s_server,&post)!=ESP_OK || httpd_register_uri_handler(s_server,&settings_post)!=ESP_OK || httpd_register_uri_handler(s_server,&control_post)!=ESP_OK || httpd_register_uri_handler(s_server,&scan_post)!=ESP_OK || httpd_register_uri_handler(s_server,&status_get)!=ESP_OK || httpd_register_uri_handler(s_server,&time_post)!=ESP_OK) { close_portal(); set_failed(true); return; }
     portENTER_CRITICAL(&s_mux);
     strcpy(s_state.ap_name,name); strcpy(s_state.ap_password,pass); s_state.portal=true; s_state.failed=false; memset(&s_wifi,0,sizeof(s_wifi));s_wifi.scanning=true; s_portal_end=esp_timer_get_time()+300000000;
     portEXIT_CRITICAL(&s_mux);
@@ -245,6 +261,10 @@ static void worker(void *arg) {
     for(;;) {
         if(xQueueReceive(s_queue,&cmd,pdMS_TO_TICKS(1000))==pdTRUE) {
             switch(cmd.id) {
+            case CMD_PHONE_TIME:
+                portENTER_CRITICAL(&s_mux);
+                s_utc_anchor=cmd.utc_us;s_mono_anchor=cmd.mono_us;s_state.synced=true;s_state.phone_time=true;s_state.phone_revision++;
+                portEXIT_CRITICAL(&s_mux);break;
             case CMD_SETUP: setup(); scan_wifi(); break;
             case CMD_SCAN: scan_wifi(); break;
             case CMD_CLOSE: close_portal(); break;
@@ -257,7 +277,7 @@ static void worker(void *arg) {
                 portENTER_CRITICAL(&s_mux); s_state.connected=false; portEXIT_CRITICAL(&s_mux); break;
             case CMD_CREDENTIALS:
                 s_candidate=cmd.credentials; s_trying=true;
-                portENTER_CRITICAL(&s_mux);s_state.connecting=true;s_state.connected=false;s_state.failed=false;portEXIT_CRITICAL(&s_mux);
+                portENTER_CRITICAL(&s_mux);s_connection_revision++;s_state.connecting=true;s_state.connected=false;s_state.failed=false;portEXIT_CRITICAL(&s_mux);
                 esp_wifi_disconnect();
                 set_failed(!connect_wifi(&s_candidate)); retry=esp_timer_get_time()+10000000; break;
             case CMD_IP: {

@@ -9,7 +9,9 @@ LV_FONT_DECLARE(od_font_9);LV_FONT_DECLARE(od_font_11);LV_FONT_DECLARE(od_font_1
 LV_FONT_DECLARE(od_font_29);LV_FONT_DECLARE(od_font_44);
 LV_FONT_DECLARE(od_font_23);LV_FONT_DECLARE(od_font_21);
 LV_FONT_DECLARE(od_font_24);
-LV_FONT_DECLARE(od_digits_35);LV_FONT_DECLARE(od_digits_128);LV_FONT_DECLARE(od_digits_148);
+LV_FONT_DECLARE(od_font_8);LV_FONT_DECLARE(od_digits_24);LV_FONT_DECLARE(od_digits_45);
+LV_FONT_DECLARE(od_wait_title);
+LV_FONT_DECLARE(od_digits_35);LV_FONT_DECLARE(od_digits_47);LV_FONT_DECLARE(od_digits_128);LV_FONT_DECLARE(od_digits_148);
 static uint16_t pixels[240*320],draw_buffer[240*40];
 static unsigned flushed_pixels;
 static void flush(lv_display_t *display,const lv_area_t *a,uint8_t *map) {
@@ -42,12 +44,20 @@ static void render(lv_obj_t *scr,od_view_t *view,const char *name) {
         assert(bottom>=top && abs(top+bottom-(2*y+33))<=2);
     }
 }
+static void check_relax_center(int mood) {
+    const uint32_t body[]={0xa3dec0,0xffae8d,0xa3dec0,0xa3dec0,0x8dbcec,0xf4aeca,0xe5ecd3,0xff805c};
+    uint16_t color=lv_color_to_u16(lv_color_hex(body[mood]));int left=240,right=-1;
+    for(int y=112;y<250;y++)for(int x=0;x<240;x++)if(pixels[y*240+x]==color) {
+        if(x<left)left=x;if(x>right)right=x;
+    }
+    assert(right>=left && abs(left+right-239)<=20);
+}
 int main(int argc,char **argv) {
     lv_init();lv_display_t *display=lv_display_create(240,320);assert(display);
     lv_display_set_color_format(display,LV_COLOR_FORMAT_RGB565);
     lv_display_set_buffers(display,draw_buffer,NULL,sizeof(draw_buffer),LV_DISPLAY_RENDER_MODE_PARTIAL);
     lv_display_set_flush_cb(display,flush);
-    const lv_font_t *fonts[]={&od_font_9,&od_font_11,&od_font_10,&od_font_12,&od_font_14,&od_font_21,&od_font_23,&od_font_24,&od_font_29,&od_font_44};
+    const lv_font_t *fonts[]={&od_font_8,&od_font_9,&od_font_11,&od_font_10,&od_font_12,&od_font_14,&od_font_21,&od_font_23,&od_font_24,&od_font_29,&od_font_44};
     if(argc==2) {
         FILE *f=fopen(argv[1],"rb");assert(f);char text[4096];size_t n=fread(text,1,sizeof(text)-1,f);text[n]=0;fclose(f);
         for(unsigned i=0;i<sizeof(fonts)/sizeof(fonts[0]);i++) {
@@ -55,14 +65,21 @@ int main(int argc,char **argv) {
                 assert(lv_font_get_glyph_dsc(fonts[i],&d,c,0));assert(!d.is_placeholder);}
         }
         for(unsigned i=0;i<95;i++) for(unsigned j=0;j<sizeof(fonts)/sizeof(fonts[0]);j++){lv_font_glyph_dsc_t d;assert(lv_font_get_glyph_dsc(fonts[j],&d,i+32,0));assert(!d.is_placeholder);}
-        const lv_font_t *digits[]={&od_digits_35,&od_digits_128,&od_digits_148};
-        for(unsigned j=0;j<3;j++) for(const char *c="0123456789:-";*c;c++) {lv_font_glyph_dsc_t d;assert(lv_font_get_glyph_dsc(digits[j],&d,*c,0));assert(!d.is_placeholder);}
+        const lv_font_t *digits[]={&od_digits_24,&od_digits_45,&od_digits_35,&od_digits_47,&od_digits_128,&od_digits_148};
+        for(unsigned j=0;j<sizeof(digits)/sizeof(digits[0]);j++) for(const char *c="0123456789:-";*c;c++) {lv_font_glyph_dsc_t d;assert(lv_font_get_glyph_dsc(digits[j],&d,*c,0));assert(!d.is_placeholder);}
+        const char *heading="本人目前尚未营业。";uint32_t heading_index=0;
+        while(heading[heading_index]){uint32_t c=lv_text_encoded_next(heading,&heading_index);lv_font_glyph_dsc_t d;assert(lv_font_get_glyph_dsc(&od_wait_title,&d,c,0));assert(!d.is_placeholder);}
         assert(121+od_digits_128.line_height<258);
         puts("UI font coverage and countdown clearance: PASS");
     }
     od_view_t v={.mood=3,.egg=-1,.relax=-1,.battery=82,.connected=true,.synced=true,.plan_ready=true,.animation_ms=1200,.confetti_ms=-1};
     od_settings_default(&v.settings);v.utc_us=INT64_C(1791790920000000);v.time=od_time_at(v.utc_us,&v.settings);
     lv_obj_t *scr=od_ui_create();char name[32];
+    v.boot=true;
+    for(int ms=0;ms<3000;ms+=100){v.boot_ms=ms;od_ui_update(scr,&v);lv_refr_now(NULL);}
+    const int boot_frames[]={0,900,1500,2200,2999};
+    for(unsigned i=0;i<sizeof(boot_frames)/sizeof(boot_frames[0]);i++){v.boot_ms=boot_frames[i];snprintf(name,sizeof(name),"boot-%d",v.boot_ms);render(scr,&v,name);}
+    v.boot=false;render(scr,&v,"boot-to-work");
     v.connected=false;v.synced=false;v.plan_ready=false;render(scr,&v,"welcome-wifi");
     v.connected=true;render(scr,&v,"welcome-time");v.synced=true;render(scr,&v,"welcome-plan");v.plan_ready=true;
     v.mood=3;v.animation_ms=100;render(scr,&v,"pet-awake");
@@ -73,14 +90,29 @@ int main(int argc,char **argv) {
         v.mood=i;snprintf(name,sizeof(name),"mood-%d",i);render(scr,&v,name);
         lv_color_t tag=lv_color_hex(tag_colors[i]);assert(pixels[151*240+45]==lv_color_to_u16(tag));
     }
-    for(int i=0;i<5;i++){v.egg=i;v.effect_ms=1500;snprintf(name,sizeof(name),"egg-%d",i);render(scr,&v,name);}v.egg=-1;
+    for(int i=0;i<5;i++) {
+        v.egg=i;
+        for(int age=0;age<3000;age+=200) {
+            v.effect_ms=age;od_ui_update(scr,&v);lv_refr_now(NULL);
+            uint16_t paper=lv_color_to_u16(lv_color_hex(0xfff9e6));
+            int left=240,right=-1,top=320,bottom=-1;
+            for(int y=104;y<254;y++)for(int x=0;x<240;x++)if(pixels[y*240+x]!=paper) {
+                if(x<left)left=x;if(x>right)right=x;if(y<top)top=y;if(y>bottom)bottom=y;
+            }
+            assert(left>=17 && right<223 && top>=112 && bottom<250);
+            // The escaping soul moves toward its door; the other scenes stay centered.
+            if(i!=3)assert(abs(left+right-239)<=6);
+        }
+        v.effect_ms=1500;snprintf(name,sizeof(name),"egg-%d",i);render(scr,&v,name);
+    }
+    puts("Break illustration centering and animation clearance: PASS");v.egg=-1;
     v.off_home=true;
     for(int mood=0;mood<8;mood++)for(int effect=0;effect<6;effect++) {
-        v.mood=mood;v.relax=effect;v.effect_ms=0;od_ui_update(scr,&v);lv_refr_now(NULL);
+        v.mood=mood;v.relax=effect;v.effect_ms=0;od_ui_update(scr,&v);lv_refr_now(NULL);check_relax_center(mood);
         uint16_t first[240*320];memcpy(first,pixels,sizeof(first));
         for(int age=200;age<3000;age+=200) {
             v.effect_ms=age;flushed_pixels=0;od_ui_update(scr,&v);lv_refr_now(NULL);
-            assert(flushed_pixels<=57600);
+            assert(flushed_pixels<=57600);check_relax_center(mood);
             uint16_t partial[240*320];memcpy(partial,pixels,sizeof(partial));lv_obj_invalidate(scr);lv_refr_now(NULL);
             if(memcmp(partial,pixels,sizeof(partial))) {
                 int x1=240,y1=320,x2=0,y2=0;
@@ -101,6 +133,14 @@ int main(int argc,char **argv) {
     for(int y=0;y<123;y++)memcpy(qr+y*123,pixels+(86+y)*240+58,123*sizeof(uint16_t));
     v.phone_connected=true;render(scr,&v,"settings-address");
     for(int y=0;y<123;y++)assert(!memcmp(qr+y*123,pixels+(86+y)*240+58,123*sizeof(uint16_t)));
+    static uint16_t before_feedback[240*320];memcpy(before_feedback,pixels,sizeof(pixels));
+    for(int result=1;result<=3;result++) {
+        v.feedback=result;snprintf(name,sizeof(name),"phone-feedback-%d",result);render(scr,&v,name);
+        assert(!memcmp(before_feedback,pixels,240*274*sizeof(uint16_t)));
+        assert(memcmp(before_feedback+240*274,pixels+240*274,240*46*sizeof(uint16_t)));
+    }
+    v.feedback=0;render(scr,&v,"phone-feedback-dismissed");
+    assert(!memcmp(before_feedback,pixels,sizeof(pixels)));
     v.menu=0;v.portal=false;v.phone_connected=false;
     v.hold_remaining_ms=OD_HOLD_MS;render(scr,&v,"hold");v.hold_remaining_ms=0;
     v.early_done=true;render(scr,&v,"early");v.off_home=true;v.free_us=18000000;render(scr,&v,"off-home");v.off_home=false;v.early_done=false;
@@ -142,10 +182,31 @@ int main(int argc,char **argv) {
     uint16_t partial[240*320];memcpy(partial,pixels,sizeof(partial));lv_obj_invalidate(scr);lv_refr_now(NULL);assert(!memcmp(partial,pixels,sizeof(partial)));
     v.confetti_ms=-1;
     printf("Top-to-bottom confetti, text overlay, no trails: PASS; max flushed pixels/frame: %d\n",max_flush);
+    v.time=od_time_between(v.utc_us,v.utc_us/1000000+9*3600,v.utc_us/1000000+18*3600);render(scr,&v,"waiting-home");
+    v.settings.start_min=1020;v.settings.end_min=1080;v.settings.wait_min=960;
+    v.utc_us=(INT64_C(1791763200)+8*3600+42*60)*1000000;v.time=od_time_at(v.utc_us,&v.settings);
+    const uint32_t waiting_paper[]={0xe0e4eb,0xead9ce,0xdce5c9,0xf1e3ae,0xdce9e7,0xefdee5,0xe3dff0,0xeac7ad};
+    const uint32_t waiting_band[]={0x465268,0x765a56,0x35594c,0x746323,0x315d67,0x795367,0x5b5475,0x804a36};
+    const uint32_t waiting_pet[]={0xb4c6dd,0xd69e85,0x9bc6a7,0xe8c66a,0x9ccdc4,0xdda5bd,0xbeb3db,0xe79672};
+    for(int mood=0;mood<8;mood++)for(int frame=0;frame<5;frame++) {
+        v.mood=mood;v.animation_ms=frame*500;snprintf(name,sizeof(name),"waiting-charge-%d-%d",mood,frame);render(scr,&v,name);
+        uint16_t background=lv_color_to_u16(lv_color_hex(waiting_paper[mood])),band=lv_color_to_u16(lv_color_hex(waiting_band[mood])),pet=lv_color_to_u16(lv_color_hex(waiting_pet[mood]));
+        assert(pixels[40*240+5]==background && pixels[180*240+5]==band);
+        int pet_pixels=0;for(int y=151;y<215;y++)for(int x=164;x<219;x++)if(pixels[y*240+x]==pet)pet_pixels++;
+        assert(pet_pixels>=100);
+        for(int y=275;y<=280;y++){assert(pixels[y*240+20]==band);assert(pixels[y*240+209]!=band);}
+        for(int x=20;x<220;x++)assert(pixels[319*240+x]==background);
+        uint16_t snapshot[240*320];memcpy(snapshot,pixels,sizeof(snapshot));lv_obj_invalidate(scr);lv_refr_now(NULL);assert(!memcmp(snapshot,pixels,sizeof(snapshot)));
+    }
+    v.time.remaining_us=90*60*INT64_C(1000000);render(scr,&v,"waiting-charge-long");
+
+    v.work_choice=true;v.work_option=0;render(scr,&v,"work-choice-continue");v.work_option=1;render(scr,&v,"work-choice-overtime");v.work_choice=false;
+    v.resume_picker=true;v.overtime_picker=true;v.overtime_min=30;render(scr,&v,"overtime-picker");v.overtime_min=480;render(scr,&v,"overtime-picker-max");v.overtime_picker=false;
     v.resume_picker=true;v.resume_end_min=1110;render(scr,&v,"resume-picker");v.resume_picker=false;
     v.utc_us=INT64_C(1791799200)*1000000;
     v.time=od_time_between(v.utc_us,v.utc_us/1000000,od_resume_end(v.utc_us,1110));
     v.connected=false;render(scr,&v,"resumed-offline");
+    v.overtime=true;render(scr,&v,"overtime-home");v.time.phase=OD_DONE;render(scr,&v,"overtime-complete");v.overtime=false;
 
     lv_display_delete(display);lv_deinit();puts("UI rendering: PASS");
 }

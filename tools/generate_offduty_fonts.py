@@ -19,17 +19,24 @@ def main():
     symbols = "".join(sorted(set(re.findall(r"[^\x00-\x7f]", source))))
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "characters.txt").write_text(symbols + "\n")
-    for size in (9, 10, 11, 12, 14, 21, 23, 24, 29, 44, 35, 128, 148):
-        digits = size in (35, 128, 148)
+    for size in (8, 9, 10, 11, 12, 14, 21, 23, 24, 29, 44, 35, 45, 47, 128, 148):
+        digits = size in (35, 45, 47, 128, 148)
         name = f"od_{'digits' if digits else 'font'}_{size}"
         cmd = ["node", args.converter, "--size", str(size), "--bpp", "4",
-               "--format", "lvgl", "--font", args.mono if size==35 else args.digits if digits else args.cjk,
+               "--format", "lvgl", "--font", args.mono if size in (35,45,47) else args.digits if digits else args.cjk,
                "--symbols", "0123456789:-" if digits else symbols,
                "--no-compress", "--no-kerning", "--lv-include", "lvgl.h", "--lv-font-name", name,
                "-o", str(OUT / f"{name}.c")]
         if not digits:
             cmd += ["--range", "32-126"]
         subprocess.run(cmd, check=True)
+        output = OUT / f"{name}.c"
+        output.write_text(output.read_text().rstrip() + "\n")
+    for name, size, text in (("od_wait_title", 29, "本人目前尚未营业。"), ("od_boot_question", 42, "?"), ("od_boot_caption", 8, "POCKET COMPANION"), ("od_digits_24", 24, "0123456789:-")):
+        subprocess.run(["node", args.converter, "--size", str(size), "--bpp", "4",
+                        "--format", "lvgl", "--font", args.mono if name=="od_digits_24" else args.cjk, "--symbols", text,
+                        "--no-compress", "--no-kerning", "--lv-include", "lvgl.h",
+                        "--lv-font-name", name, "-o", str(OUT / f"{name}.c")], check=True)
         output = OUT / f"{name}.c"
         output.write_text(output.read_text().rstrip() + "\n")
 

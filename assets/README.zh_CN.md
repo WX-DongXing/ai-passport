@@ -19,7 +19,7 @@
 
 [应用说明](../docs/assets/off-duty-club.zh_CN.md)使用 `fonts/offduty/` 下可再分发的子集：Source Han Sans SC Medium 用于文字，Roboto Mono 700 用于时分秒，Anton 向右倾斜六度用于发射数字。原始来源：[Source Han Sans](https://github.com/adobe-fonts/source-han-sans/tree/release/OTF/SimplifiedChinese)、[Anton](https://github.com/google/fonts/tree/main/ofl/anton)、[Roboto Mono](https://github.com/google/fonts/tree/main/ofl/robotomono)。均采用 SIL OFL，许可证保留在字体目录。修改后的子集命名为 OffDutySans、OffDutyClock、OffDutyDigits。OTF/TTF 是可复用转换输入，WOFF2 与浏览器预览共用字形；固件不嵌入完整 CJK 字库。
 
-`characters.txt` 收集 `main/offduty_ui.c` 的所有非 ASCII 字符。界面字号 9、10、11、12、14、21、23、24、29、44 均覆盖字表和可打印 ASCII；时分秒字号 35，发射数字字号 128/148 覆盖 `0123456789:-`。生成的位图为常量 4 bpp、不压缩、无字距微调，兼容 LVGL 9.5.0，通过 `main/CMakeLists.txt` 编译。任意 SSID 仅在手机上输入。应用渲染测试用实际 LVGL 字形描述验证覆盖，拒绝占位符。
+`characters.txt` 收集 `main/offduty_ui.c` 的所有非 ASCII 字符。界面字号 8、9、10、11、12、14、21、23、24、29、44 均覆盖字表和可打印 ASCII；时分秒字号 24/35/45/47，发射数字字号 128/148 覆盖 `0123456789:-`。生成的位图为常量 4 bpp、不压缩、无字距微调，兼容 LVGL 9.5.0，通过 `main/CMakeLists.txt` 编译。任意 SSID 仅在手机上输入。应用渲染测试用实际 LVGL 字形描述验证覆盖，拒绝占位符。
 
 使用 fonttools 4.60.1、brotli 1.1.0、lv_font_conv 1.5.3 重现：
 
@@ -60,3 +60,5 @@ python3 tools/generate_offduty_fonts.py --converter /path/node_modules/lv_font_c
 `images/offduty/od_stamps.c` 包含八个 100 × 90 RGB565 印章，由本应用原版 LVGL 图形及 OFL 字体渲染得到。占用 144,000 字节 Flash，无需常驻 RAM 缓冲。修改印章颜色或字体后，将 `tests/offduty_render` 配置为 `-DOD_STAMP_REFERENCE=ON`，构建并在图像目录运行，再执行 `python3 tools/generate_offduty_stamps.py <图像目录>`。交付前恢复 `-DOD_STAMP_REFERENCE=OFF` 并比较八种下班页面。
 
 放松宠物精灵 `assets/images/offduty/od_pets.c` 保留原版 LVGL 造型。六种动作共用八种普通及八种休息表情（13 张去重 RGB565A8 图片，Flash 数据 261,924 字节），无需动态宠物图层。通过主机渲染器的 `OD_PET_REFERENCE` 目标 `offduty_pet_assets` 重新生成透明 BGRA 输入，再运行 `python3 tools/generate_offduty_pets.py <render-directory>`。资源是本项目原创，复用实际应用的宠物绘制代码。
+
+充能等待页另外使用 22 像素的 `od_wait_title` 固定标题字库；47 像素时钟与原时钟共用 Roboto Mono 源字体。

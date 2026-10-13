@@ -31,8 +31,8 @@ OTF/TTF files are the reusable conversion inputs; WOFF2 versions share these
 glyphs with the browser preview. No full CJK font is embedded in firmware.
 
 `characters.txt` inventories all non-ASCII characters in `main/offduty_ui.c`.
-Each UI size (9, 10, 11, 12, 14, 21, 23, 24, 29, 44) contains this inventory plus printable ASCII;
-clock size 35 and launch sizes 128/148 contain `0123456789:-`. Generated bitmap
+Each UI size (8, 9, 10, 11, 12, 14, 21, 23, 24, 29, 44) contains this inventory plus printable ASCII;
+clock sizes 24/35/45/47 and launch sizes 128/148 contain `0123456789:-`. Generated bitmap
 sources are constant 4 bpp, uncompressed, without kerning, compatible with LVGL
 9.5.0, and compiled by `main/CMakeLists.txt`. Dynamic SSIDs are entered only on
 the phone. Font coverage is checked with real LVGL glyph descriptors by the
@@ -79,3 +79,5 @@ Store reusable music and sound-effect sources in `music/`.
 `images/offduty/od_stamps.c` contains eight 100 × 90 RGB565 stamps rendered from this application's original LVGL artwork and OFL fonts. They use 144,000 bytes of Flash and no retained RAM buffer. To regenerate after changing stamp colors or fonts, configure `tests/offduty_render` with `-DOD_STAMP_REFERENCE=ON`, build and run it in its images directory, then run `python3 tools/generate_offduty_stamps.py <images-directory>`. Restore `-DOD_STAMP_REFERENCE=OFF` and compare all eight completion renders before delivery.
 
 The relaxation pet sprites in `assets/images/offduty/od_pets.c` preserve the original LVGL artwork. Six motions share eight normal and eight resting expressions (13 unique RGB565A8 images, 261,924 data bytes in Flash); no dynamic pet layer is allocated. Regenerate transparent BGRA inputs with the `OD_PET_REFERENCE` host-renderer target `offduty_pet_assets`, then run `python3 tools/generate_offduty_pets.py <render-directory>`. These are original project assets, using the same pet drawing code as the live app.
+
+The charging wait page additionally uses `od_wait_title` at 22 px for its fixed heading; the 47 px clock shares the Roboto Mono source.
