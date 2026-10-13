@@ -44,6 +44,8 @@ int main(void) {
     assert(strstr(phone_html,"action=/time") && strstr(phone_html,"Date.now()") && strstr(phone_html,"id=phone-clock-button disabled"));
     assert(strstr(phone_html,"name=start type=time step=60") && strstr(phone_html,"name=end type=time step=60") && strstr(phone_html,"name=wait type=time step=60"));
     assert(!strstr(phone_html,"半小时") && strstr(phone_html,"默认提前 1 小时"));
+    assert(!strstr(phone_html,"密码可显示或隐藏") && !strstr(phone_html,"不回显"));
+    assert(strstr(phone_html,"class=signature>OFF DUTY CLUB"));
     assert(strstr(phone_html,"action=/scan") && strstr(phone_html,"action=/settings"));
     assert(strstr(phone_html,"data-password=wifi-password") && strstr(phone_html,"data-password=hidden-password"));
     assert(strstr(phone_html,"name=eggs") && strstr(phone_html,"name=screen_off") && !strstr(phone_html,"name=idle"));
