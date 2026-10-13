@@ -37,12 +37,12 @@ Settings displays the application version and contains start/end/waiting times, 
 automatic break scenes, Wi-Fi setup,
 manual synchronization, synchronization status, Forget Network, and Return.
 UP/DOWN selects a row. OK enters editing; UP/DOWN adjusts and OK saves.
-Time settings change by 30 minutes for shift times, brightness and volume by five percent.
+Shift and waiting times change by one minute, brightness and volume by five percent.
 Holding OK cancels an unfinished edit and returns. Forget Network requires
 another OK; UP/DOWN cancels the confirmation. Existing unrelated NVS data is
 preserved. Start and end cannot be equal; overnight shifts are supported.
 
-Default hours are 09:00–18:00 China time, brightness 80%, volume 35%, screen-off
+Default hours are 09:00–18:00 China time, brightness 75%, volume 50%, screen-off
 disabled, automatic
 breaks enabled with a fifteen-minute cooldown. Screen-off disables only the
 backlight. One key action wakes without performing its normal action. The
@@ -74,7 +74,7 @@ time accuracy require measurements; this is not a submillisecond timing guarante
 
 ## Continue work and overtime
 
-From the off-duty home, UP opens a two-option page. Continue work adjusts the daily end time in half-hour steps and saves it to device settings. Overtime starts a separate 30-minute to 8-hour session, adjusted in half-hour steps; it does not change daily start/end settings. The picker displays duration and expected end time, including the next-day label.
+From the off-duty home, UP opens a two-option page. Continue work adjusts the daily end time in one-minute steps and saves it to device settings. Overtime starts a separate 30-minute to 8-hour session, adjusted in half-hour steps; it does not change daily start/end settings. The picker displays duration and expected end time, including the next-day label.
 
 The overtime home shows its own remaining time and progress (below 100% until completion). The existing final-minute animation and mood-themed completion receipt apply to overtime. Short DOWN keeps the three-second break; holding DOWN for five seconds finishes the session early. Short OK on completion opens the off-duty home; long OK still opens settings.
 
@@ -82,7 +82,7 @@ A separate `overtime` NVS record stores session start/end. Wi-Fi loss preserves 
 
 ## Waiting for work and completed-page retention
 
-The waiting transition follows shift order: current start, current end, waiting, next start. The default is one hour before the next start (09:00–18:00 defaults to next-day 08:00; 22:00–06:00 defaults to 21:00). Changing either daily start or end recalculates waiting. When the rest interval is shorter than an hour, the default is the shift end; the completion state is observed before waiting starts. Manual half-hour adjustment only offers times from the current end up to, but excluding, the next start. Device settings group all three time rows first; the phone form groups them before display/audio preferences and updates the wait field immediately on start/end changes. Invalid phone submissions are rejected server-side as well.
+The waiting transition follows shift order: current start, current end, waiting, next start. The default is one hour before the next start (09:00–18:00 defaults to next-day 08:00; 22:00–06:00 defaults to 21:00). Changing either daily start or end recalculates waiting. When the rest interval is shorter than an hour, the default is the shift end; the completion state is observed before waiting starts. Manual one-minute adjustment only offers times from the current end up to, but excluding, the next start. Device settings group all three time rows first; the phone form groups them before display/audio preferences and updates the wait field immediately on start/end changes. Invalid phone submissions are rejected server-side as well.
 
 An active overnight shift or overtime session is not interrupted. Explicit continue-work changes update daily waiting, while independent overtime does not alter the daily plan. Legacy 12/14-byte settings retain other preferences; an absent `waitv` marker recalculates the new default on load, and future saves mark this migration complete. The settings blob size remains 14 bytes and partitions remain unchanged. Cached phone pages must be refreshed to load the new linkage script.
 
@@ -165,7 +165,7 @@ The portal has no visible waiting countdown; the five-minute hotspot lifetime re
 
 The completion ticket and home mood tag share eight accent/ink palettes. Receipt paper, ticket, seal and pet expression follow the mood; the pet remains above the lower teeth. UP/DOWN on celebration release ten randomly distributed fragments in front of all text, falling out of the screen bottom over about two seconds. Short OK opens the off-duty home; long OK opens Settings without a visible long-press hint.
 
-The resume picker changes end time in half-hour steps. OK persists the chosen time to the device/phone setting before starting the new session from calibrated time; failed saves stay on the picker. Long OK cancels. Screen-off offers always on and 1, 2, 5, 10 or 30 idle minutes. Stored settings retain the old blob layout; legacy idle values round upward, capped at 30 minutes, and scheduled sleep becomes always on.
+The resume picker changes end time in one-minute steps. OK persists the chosen time to the device/phone setting before starting the new session from calibrated time; failed saves stay on the picker. Long OK cancels. Screen-off offers always on and 1, 2, 5, 10 or 30 idle minutes. Stored settings retain the old blob layout; legacy idle values round upward, capped at 30 minutes, and scheduled sleep becomes always on.
 
 The phone portal lists up to 16 supported nearby networks ordered by signal strength, supports rescanning and retains a manual form for hidden networks. Its worker owns scan/connection operations; failed scans preserve previous results and do not interrupt credential attempts. SSIDs are escaped and requests require the private AP interface and session token. Network names/passwords are not logged.
 
@@ -193,10 +193,18 @@ Scanned and manual Wi-Fi forms mask passwords by default. Independent show/hide 
 
 The accepted poster design replaces the circular charging page: two-line heading, a five-degree diagonal countdown band, pet at the right, and aligned charging labels, ten-segment progress, start time and button hints below. UP retains the eight-mood cycle and now changes the waiting palette, pet body/expression and dedicated pre-work caption together. Work-page palettes and captions remain separate. Long waits use a 24 px HH:MM:SS clock; ordinary waits use 45 px MM:SS. The 29 px heading has its own glyph subset, and the 8 px mood header uses a verified Chinese font. Small text layers rotate within the 48 KB LVGL pool; overlapping background triangles avoid a visible seam without allocating a full-screen layer.
 
-## Version and current validation
+## Version and last flashed validation
 
 The application version is `1.0.0`, defined once in `main/offduty_version.h`. The ESP-IDF application descriptor, device settings header and phone settings header use this value. The version is read-only and does not change saved preferences.
 
 Build: PASS. Host tests: PASS, including Chinese glyph coverage, 40 waiting-page frames, long countdowns, palette/pet matching, settings alignment, phone version output and partial/full rendering. Verified archive: `build/firmware/979ea53ed367a0857c7e392235e5ed747ec4b1c81150f2cbe348b72f23605fbd/`; ELF SHA-256 `97ca16a07f5bae5ee50b730ece620146f4e35ab49f69a7ce424e062431c1ac8b`. The application is 2,800,032 bytes and fits the installed 3 MiB partition.
 
 Device tests: PASS for segmented bootloader/application flashing, unchanged-partition verification and a 35-second startup check. The running application reports version `1.0.0` and matching ELF prefix `97ca16a07`; the splash lasted 3,087 ms, with no errors or crash markers. The serial monitor is closed. Unverified: physical text alignment, eight-mood switching, animation smoothness, phone Safari layout and automatic work-start transition. Use verified bootloader/app components at `0x0`/`0x10000` when retaining the installed partition table and settings; do not flash the merged image for this workflow.
+
+## Settings and refresh optimization
+
+Device and phone labels use preparation time, start time and end time. All three support one-minute adjustment; overtime duration retains half-hour steps. Preparation defaults to one hour before the next start and follows schedule edits. New installations default to 09:00–18:00, 75% brightness, 50% volume and always-on display; stored preferences are retained.
+
+A completed resumed shift now expires at the next valid preparation window instead of masking it until the next start. Wi-Fi connection success waits for the network-configuration storage result; persistence failure is reported separately from connectivity. Waiting-page redraws skip unchanged frames, update the central 120 rows for pet/countdown changes, and redraw the small charging region only on percentage changes. Host frames are compared against complete redraws. The unused 47 px clock font is removed and the 8 px subset is limited to the waiting header and mood names; this saves Flash, not runtime RAM.
+
+Optimization validation: Build PASS; Host tests PASS, including minute-level forms, preserved preferences, resumed-shift preparation boundary, storage-failure status and LVGL partial/full frame equality. Archive `build/firmware/3daee2b5683a884377e106aeadf36bc2aba47c4561daa6a0ef62e72164386fe8/`, ELF SHA-256 `00ea0f17ec1a3783bd664b14decfcf03795f1d66ea3a07df3e2084f65d7d31a8`. Application size 2,781,168 bytes, 18,864 bytes smaller than the last flashed build. Device tests: segmented write/hash verification, unchanged installed partition table and 35-second startup observation PASS. The running ELF prefix is `00ea0f17e`, version `1.0.0`, splash 3,003 ms, no error/crash markers; monitor closed. Physical UI, animation smoothness, one-minute button editing, phone saving and Wi-Fi persistence remain unverified.

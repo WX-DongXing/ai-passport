@@ -20,7 +20,6 @@ idf_component_register(
          "../assets/fonts/offduty/od_boot_question.c"
          "../assets/fonts/offduty/od_boot_caption.c"
          "../assets/fonts/offduty/od_digits_35.c"
-         "../assets/fonts/offduty/od_digits_47.c"
          "../assets/fonts/offduty/od_digits_45.c"
          "../assets/fonts/offduty/od_digits_24.c"
          "../assets/fonts/offduty/od_digits_128.c"

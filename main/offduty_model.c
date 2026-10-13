@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 void od_settings_default(od_settings_t *s) {
-    *s = (od_settings_t){540, 1080, 1200, 300, 80, 35, 0, 1, 480};
+    *s = (od_settings_t){540, 1080, 1200, 300, 75, 50, 0, 1, 480};
 }
 void od_wait_link(od_settings_t *s) {
     int rest=(s->start_min+1440-s->end_min)%1440;
@@ -18,7 +18,7 @@ int od_wait_percent(int64_t remaining_us,int start_min,int wait_min) {
 }
 int od_wait_step(const od_settings_t *s,int direction) {
     int candidate=s->wait_min;
-    for(int i=0;i<48;i++) {
+    for(int i=0;i<1440;i++) {
         candidate=od_shift_step(candidate,direction);
         int after_end=(candidate+1440-s->end_min)%1440,rest=(s->start_min+1440-s->end_min)%1440;
         if(after_end<rest)return candidate;
@@ -70,7 +70,7 @@ void od_sleep_migrate(od_settings_t *s) {
 }
 
 int od_shift_step(int minute,int direction) {
-    int next=direction>0?(minute/30+1)*30:((minute+29)/30-1)*30;
+    int next=minute+(direction>0?1:-1);
     return (next+1440)%1440;
 }
 
@@ -267,6 +267,11 @@ int64_t od_resume_end(int64_t utc_us,int minute) {
     return end;
 }
 
+bool od_resume_applies(int64_t utc_us,int64_t start,int64_t end,od_time_t scheduled) {
+    if(end<=start)return false;
+    if(!utc_us || utc_us<end*1000000 || scheduled.start_utc<=start)return true;
+    return scheduled.phase!=OD_BEFORE && utc_us<scheduled.start_utc*1000000;
+}
 int64_t od_clock_utc(int64_t utc_anchor,int64_t mono_anchor,int64_t now) {
     if(utc_anchor<INT64_C(1735689600000000) || mono_anchor<0 || now<mono_anchor)return 0;
     return utc_anchor+now-mono_anchor;

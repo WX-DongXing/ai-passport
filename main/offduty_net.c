@@ -129,7 +129,7 @@ static esp_err_t status_page(httpd_req_t *req) {
     httpd_resp_set_hdr(req,"X-Wifi-Revision",wifi_revision);
     httpd_resp_set_hdr(req,"Content-Security-Policy","default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'");
     httpd_resp_set_hdr(req,"Refresh","3");
-    if(!od_phone_status(phone_emit,req,net.connected,net.synced,net.connecting,net.failed,net.phone_time,result))return ESP_FAIL;
+    if(!od_phone_status(phone_emit,req,net.connected,net.synced,net.connecting,net.failed,net.phone_time,net.wifi_save_result,result))return ESP_FAIL;
     return httpd_resp_send_chunk(req,NULL,0);
 }
 static esp_err_t scan_request(httpd_req_t *req) {
@@ -274,10 +274,10 @@ static void worker(void *arg) {
                 if(nvs_commit(s_nvs)!=ESP_OK) { set_failed(true); break; }
                 memset(&s_saved,0,sizeof(s_saved)); memset(&s_candidate,0,sizeof(s_candidate)); s_trying=false;
                 esp_wifi_disconnect(); close_portal();
-                portENTER_CRITICAL(&s_mux); s_state.connected=false; portEXIT_CRITICAL(&s_mux); break;
+                portENTER_CRITICAL(&s_mux); s_state.connected=false;s_state.wifi_save_result=OD_PHONE_UNSAVED; portEXIT_CRITICAL(&s_mux); break;
             case CMD_CREDENTIALS:
                 s_candidate=cmd.credentials; s_trying=true;
-                portENTER_CRITICAL(&s_mux);s_connection_revision++;s_state.connecting=true;s_state.connected=false;s_state.failed=false;portEXIT_CRITICAL(&s_mux);
+                portENTER_CRITICAL(&s_mux);s_connection_revision++;s_state.connecting=true;s_state.connected=false;s_state.failed=false;s_state.wifi_save_result=OD_PHONE_SAVING;portEXIT_CRITICAL(&s_mux);
                 esp_wifi_disconnect();
                 set_failed(!connect_wifi(&s_candidate)); retry=esp_timer_get_time()+10000000; break;
             case CMD_IP: {
@@ -285,8 +285,10 @@ static void worker(void *arg) {
                 if(esp_wifi_sta_get_ap_info(&ap)!=ESP_OK || (s_trying && strcmp((const char *)ap.ssid,s_candidate.ssid))) break;
                 portENTER_CRITICAL(&s_mux); s_state.connected=true; s_state.connecting=false;s_state.failed=false; portEXIT_CRITICAL(&s_mux);
                 if(s_trying) {
-                    if(nvs_set_blob(s_nvs,"wifi",&s_candidate,sizeof(s_candidate))==ESP_OK && nvs_commit(s_nvs)==ESP_OK) s_saved=s_candidate;
-                    else set_failed(true);
+                    bool saved=nvs_set_blob(s_nvs,"wifi",&s_candidate,sizeof(s_candidate))==ESP_OK && nvs_commit(s_nvs)==ESP_OK;
+                    if(saved)s_saved=s_candidate;
+                    portENTER_CRITICAL(&s_mux);s_state.wifi_save_result=saved?OD_PHONE_SAVED:OD_PHONE_SAVE_FAILED;portEXIT_CRITICAL(&s_mux);
+                    if(!saved)set_failed(true);
                     s_trying=false; memset(&s_candidate,0,sizeof(s_candidate));
                 }
                 if(!s_sntp) {

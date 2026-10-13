@@ -42,6 +42,7 @@ od_time_t od_time_at(int64_t utc_us, const od_settings_t *settings);
 od_time_t od_time_between(int64_t utc_us,int64_t start,int64_t end);
 od_time_t od_time_keep_finished(int64_t utc_us,od_time_t current,od_time_t previous,bool finished,int wait_min);
 int64_t od_resume_end(int64_t utc_us,int minute);
+bool od_resume_applies(int64_t utc_us,int64_t start,int64_t end,od_time_t scheduled);
 enum { OD_OVERTIME_MAX_MIN = 480 };
 int od_overtime_step(int minutes,int direction);
 bool od_overtime_valid(int64_t start,int64_t end);

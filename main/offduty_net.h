@@ -9,6 +9,7 @@ typedef struct {
     int64_t utc_us, sync_age_us;
     int portal_seconds;
     unsigned phone_revision;
+    unsigned wifi_save_result;
     char ap_name[24], ap_password[17];
 } od_network_t;
 typedef enum { OD_NET_SETUP, OD_NET_CLOSE, OD_NET_SYNC, OD_NET_FORGET } od_net_action_t;

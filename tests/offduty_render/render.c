@@ -11,7 +11,7 @@ LV_FONT_DECLARE(od_font_23);LV_FONT_DECLARE(od_font_21);
 LV_FONT_DECLARE(od_font_24);
 LV_FONT_DECLARE(od_font_8);LV_FONT_DECLARE(od_digits_24);LV_FONT_DECLARE(od_digits_45);
 LV_FONT_DECLARE(od_wait_title);
-LV_FONT_DECLARE(od_digits_35);LV_FONT_DECLARE(od_digits_47);LV_FONT_DECLARE(od_digits_128);LV_FONT_DECLARE(od_digits_148);
+LV_FONT_DECLARE(od_digits_35);LV_FONT_DECLARE(od_digits_128);LV_FONT_DECLARE(od_digits_148);
 static uint16_t pixels[240*320],draw_buffer[240*40];
 static unsigned flushed_pixels;
 static void flush(lv_display_t *display,const lv_area_t *a,uint8_t *map) {
@@ -57,7 +57,7 @@ int main(int argc,char **argv) {
     lv_display_set_color_format(display,LV_COLOR_FORMAT_RGB565);
     lv_display_set_buffers(display,draw_buffer,NULL,sizeof(draw_buffer),LV_DISPLAY_RENDER_MODE_PARTIAL);
     lv_display_set_flush_cb(display,flush);
-    const lv_font_t *fonts[]={&od_font_8,&od_font_9,&od_font_11,&od_font_10,&od_font_12,&od_font_14,&od_font_21,&od_font_23,&od_font_24,&od_font_29,&od_font_44};
+    const lv_font_t *fonts[]={&od_font_9,&od_font_11,&od_font_10,&od_font_12,&od_font_14,&od_font_21,&od_font_23,&od_font_24,&od_font_29,&od_font_44};
     if(argc==2) {
         FILE *f=fopen(argv[1],"rb");assert(f);char text[4096];size_t n=fread(text,1,sizeof(text)-1,f);text[n]=0;fclose(f);
         for(unsigned i=0;i<sizeof(fonts)/sizeof(fonts[0]);i++) {
@@ -65,8 +65,10 @@ int main(int argc,char **argv) {
                 assert(lv_font_get_glyph_dsc(fonts[i],&d,c,0));assert(!d.is_placeholder);}
         }
         for(unsigned i=0;i<95;i++) for(unsigned j=0;j<sizeof(fonts)/sizeof(fonts[0]);j++){lv_font_glyph_dsc_t d;assert(lv_font_get_glyph_dsc(fonts[j],&d,i+32,0));assert(!d.is_placeholder);}
-        const lv_font_t *digits[]={&od_digits_24,&od_digits_45,&od_digits_35,&od_digits_47,&od_digits_128,&od_digits_148};
+        const lv_font_t *digits[]={&od_digits_24,&od_digits_45,&od_digits_35,&od_digits_128,&od_digits_148};
         for(unsigned j=0;j<sizeof(digits)/sizeof(digits[0]);j++) for(const char *c="0123456789:-";*c;c++) {lv_font_glyph_dsc_t d;assert(lv_font_get_glyph_dsc(digits[j],&d,*c,0));assert(!d.is_placeholder);}
+        const char *header="OFF DUTY CLUB / 困困绷住摸鱼元气专注饿饿放空暴走";uint32_t header_index=0;
+        while(header[header_index]){uint32_t c=lv_text_encoded_next(header,&header_index);lv_font_glyph_dsc_t d;assert(lv_font_get_glyph_dsc(&od_font_8,&d,c,0));assert(!d.is_placeholder);}
         const char *heading="本人目前尚未营业。";uint32_t heading_index=0;
         while(heading[heading_index]){uint32_t c=lv_text_encoded_next(heading,&heading_index);lv_font_glyph_dsc_t d;assert(lv_font_get_glyph_dsc(&od_wait_title,&d,c,0));assert(!d.is_placeholder);}
         assert(121+od_digits_128.line_height<258);
@@ -190,6 +192,7 @@ int main(int argc,char **argv) {
     const uint32_t waiting_pet[]={0xb4c6dd,0xd69e85,0x9bc6a7,0xe8c66a,0x9ccdc4,0xdda5bd,0xbeb3db,0xe79672};
     for(int mood=0;mood<8;mood++)for(int frame=0;frame<5;frame++) {
         v.mood=mood;v.animation_ms=frame*500;snprintf(name,sizeof(name),"waiting-charge-%d-%d",mood,frame);render(scr,&v,name);
+        if(frame>0)assert(flushed_pixels<=28800);
         uint16_t background=lv_color_to_u16(lv_color_hex(waiting_paper[mood])),band=lv_color_to_u16(lv_color_hex(waiting_band[mood])),pet=lv_color_to_u16(lv_color_hex(waiting_pet[mood]));
         assert(pixels[40*240+5]==background && pixels[180*240+5]==band);
         int pet_pixels=0;for(int y=151;y<215;y++)for(int x=164;x<219;x++)if(pixels[y*240+x]==pet)pet_pixels++;
@@ -198,6 +201,13 @@ int main(int argc,char **argv) {
         for(int x=20;x<220;x++)assert(pixels[319*240+x]==background);
         uint16_t snapshot[240*320];memcpy(snapshot,pixels,sizeof(snapshot));lv_obj_invalidate(scr);lv_refr_now(NULL);assert(!memcmp(snapshot,pixels,sizeof(snapshot)));
     }
+    od_ui_update(scr,&v);flushed_pixels=0;lv_refr_now(NULL);assert(flushed_pixels==0);
+    for(int tick=0;tick<70;tick++) {
+        v.utc_us+=INT64_C(1000000);v.time=od_time_at(v.utc_us,&v.settings);v.animation_ms+=40;
+        od_ui_update(scr,&v);lv_refr_now(NULL);uint16_t snapshot[240*320];memcpy(snapshot,pixels,sizeof(snapshot));
+        lv_obj_invalidate(scr);lv_refr_now(NULL);assert(!memcmp(snapshot,pixels,sizeof(snapshot)));
+    }
+    puts("Waiting partial redraw and second/minute transitions: PASS");
     v.time.remaining_us=90*60*INT64_C(1000000);render(scr,&v,"waiting-charge-long");
 
     v.work_choice=true;v.work_option=0;render(scr,&v,"work-choice-continue");v.work_option=1;render(scr,&v,"work-choice-overtime");v.work_choice=false;

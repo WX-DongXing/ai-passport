@@ -266,7 +266,7 @@ void app_main(void) {
         if(od_break_age(s_feedback_at,now)<0)s_view.feedback=0;
         od_time_t previous=s_view.time;bool finished=s_view.early_done || previous.phase==OD_DONE;
         s_view.utc_us=net.utc_us; od_time_t scheduled=od_time_at(s_view.plan_ready?net.utc_us:0,&s_saved);
-        if(s_resume_end>0 && net.utc_us>=s_resume_end*1000000 && scheduled.start_utc>s_resume_start && net.utc_us>=scheduled.start_utc*1000000)s_resume_start=s_resume_end=-1;
+        if(s_resume_end>0 && !od_resume_applies(net.utc_us,s_resume_start,s_resume_end,scheduled))s_resume_start=s_resume_end=-1;
         s_view.time=s_resume_end>0?od_time_between(net.utc_us,s_resume_start,s_resume_end):scheduled;
         if(od_overtime_valid(s_overtime[0],s_overtime[1]) && !od_overtime_applies(net.utc_us,s_overtime[0],s_overtime[1],scheduled.start_utc,s_saved.wait_min)) {
             if(!store_overtime(0,0)){memset(s_overtime,0,sizeof(s_overtime));s_view.menu=1;}

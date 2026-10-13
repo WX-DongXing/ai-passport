@@ -19,7 +19,7 @@
 
 [应用说明](../docs/assets/off-duty-club.zh_CN.md)使用 `fonts/offduty/` 下可再分发的子集：Source Han Sans SC Medium 用于文字，Roboto Mono 700 用于时分秒，Anton 向右倾斜六度用于发射数字。原始来源：[Source Han Sans](https://github.com/adobe-fonts/source-han-sans/tree/release/OTF/SimplifiedChinese)、[Anton](https://github.com/google/fonts/tree/main/ofl/anton)、[Roboto Mono](https://github.com/google/fonts/tree/main/ofl/robotomono)。均采用 SIL OFL，许可证保留在字体目录。修改后的子集命名为 OffDutySans、OffDutyClock、OffDutyDigits。OTF/TTF 是可复用转换输入，WOFF2 与浏览器预览共用字形；固件不嵌入完整 CJK 字库。
 
-`characters.txt` 收集 `main/offduty_ui.c` 的所有非 ASCII 字符。界面字号 8、9、10、11、12、14、21、23、24、29、44 均覆盖字表和可打印 ASCII；时分秒字号 24/35/45/47，发射数字字号 128/148 覆盖 `0123456789:-`。生成的位图为常量 4 bpp、不压缩、无字距微调，兼容 LVGL 9.5.0，通过 `main/CMakeLists.txt` 编译。任意 SSID 仅在手机上输入。应用渲染测试用实际 LVGL 字形描述验证覆盖，拒绝占位符。
+8 px 字体仅包含等待页页眉和心情名称。`characters.txt` 收集 `main/offduty_ui.c` 的所有非 ASCII 字符。界面字号 9、10、11、12、14、21、23、24、29、44 均覆盖字表和可打印 ASCII；时分秒字号 24/35/45，发射数字字号 128/148 覆盖 `0123456789:-`。生成的位图为常量 4 bpp、不压缩、无字距微调，兼容 LVGL 9.5.0，通过 `main/CMakeLists.txt` 编译。任意 SSID 仅在手机上输入。应用渲染测试用实际 LVGL 字形描述验证覆盖，拒绝占位符。
 
 使用 fonttools 4.60.1、brotli 1.1.0、lv_font_conv 1.5.3 重现：
 

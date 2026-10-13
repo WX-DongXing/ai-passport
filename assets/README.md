@@ -31,8 +31,8 @@ OTF/TTF files are the reusable conversion inputs; WOFF2 versions share these
 glyphs with the browser preview. No full CJK font is embedded in firmware.
 
 `characters.txt` inventories all non-ASCII characters in `main/offduty_ui.c`.
-Each UI size (8, 9, 10, 11, 12, 14, 21, 23, 24, 29, 44) contains this inventory plus printable ASCII;
-clock sizes 24/35/45/47 and launch sizes 128/148 contain `0123456789:-`. Generated bitmap
+The 8 px subset contains only the waiting-page header and mood names. Each UI size (9, 10, 11, 12, 14, 21, 23, 24, 29, 44) contains this inventory plus printable ASCII;
+clock sizes 24/35/45 and launch sizes 128/148 contain `0123456789:-`. Generated bitmap
 sources are constant 4 bpp, uncompressed, without kerning, compatible with LVGL
 9.5.0, and compiled by `main/CMakeLists.txt`. Dynamic SSIDs are entered only on
 the phone. Font coverage is checked with real LVGL glyph descriptors by the

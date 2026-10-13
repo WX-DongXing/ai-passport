@@ -20,7 +20,7 @@ LV_FONT_DECLARE(od_font_24);
 LV_FONT_DECLARE(od_font_21);
 LV_FONT_DECLARE(od_font_44);
 LV_FONT_DECLARE(od_digits_35);
-LV_FONT_DECLARE(od_digits_47);
+
 LV_FONT_DECLARE(od_digits_45);
 LV_FONT_DECLARE(od_digits_24);
 LV_FONT_DECLARE(od_digits_128);
@@ -67,7 +67,7 @@ static const char *s_wait_mood[]={"困困","绷住","摸鱼","元气","专注","
 static const char *s_wait_copy[]={"再眯一会，到点叫我。","先深呼吸，开工不抢跑。","营业之前，先给自己放风。","快乐攒满，到点出发。","脑袋预热，暂不接单。","先填饱，再开始营业。","此刻只管发会儿呆。","先存体力，到点再冲。"};
 static const char *s_eggs[]={"摸鱼许可证","咖啡补给站","老板雷达","灵魂先下班","快乐预存成功"};
 static const char *s_egg_quote[]={"已批准：钓一条快乐小鱼。","今天的你，值得加一份奶。","别紧张，屏幕在认真工作。","肉身随后就到，请稍等。","今日快乐，正在排队到账。"};
-static const char *s_menu[]={"上班时间","下班时间","等待开工时间","屏幕亮度","声音大小","熄屏方式","随机彩蛋","连接 Wi-Fi","立即对时","对时状态","忘记网络","返回"};
+static const char *s_menu[]={"上班时间","下班时间","准备时间","屏幕亮度","声音大小","熄屏方式","随机彩蛋","连接 Wi-Fi","立即对时","对时状态","忘记网络","返回"};
 const char *od_menu_name(int row) { return s_menu[row]; }
 
 static float s_scale=1.f,s_scale_y=1.f;
@@ -102,7 +102,7 @@ static void text(int x,int y,int w,const char *str,const lv_font_t *font,uint32_
     d.font=font; d.color=lv_color_hex(color); d.text=str; d.text_local=1; d.align=align;
     if(font==&od_font_29) d.letter_space=-1;
     if(font==&od_font_44) d.letter_space=-3;
-    if(font==&od_digits_35 || font==&od_digits_47 || font==&od_digits_45 || font==&od_digits_24) d.letter_space=-2;
+    if(font==&od_digits_35 || font==&od_digits_45 || font==&od_digits_24) d.letter_space=-2;
     if(font==&od_digits_128 || font==&od_digits_148) d.letter_space=-11;
 #ifdef OD_UI_VALIDATE
     lv_point_t size;lv_text_get_size(&size,str,font,d.letter_space,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);
@@ -449,7 +449,7 @@ static void resume_picker(void) {
         snprintf(label,sizeof(label),"%s %s 结束",((s_view.utc_us/1000000+28800)%86400+s_view.overtime_min*60)>=86400?"次日":"预计",end);
         CENTER(17,205,206,label,&od_font_10,INK);
     }
-    CENTER(17,238,206,s_view.notice==2?"上下班时间不能相同":s_view.notice==1?"保存失败，请重试":s_view.overtime_picker?"加班时长 · 每次调整半小时":"每次调整半小时 · 同步到设置",&od_font_10,INK);
+    CENTER(17,238,206,s_view.notice==2?"上下班时间不能相同":s_view.notice==1?"保存失败，请重试":s_view.overtime_picker?"加班时长 · 每次调整半小时":"每次调整 1 分钟 · 同步到设置",&od_font_10,INK);
     rect(17,269,206,25,0x4a2da8,8,0);
     CENTER(17,275,206,s_view.overtime_picker?"OK 开始本次加班":"OK 保存并上班",&od_font_11,PAPER);
     CENTER(17,306,206,"↑ ↓ 调整 / 长按 OK 取消",&od_font_9,INK);
@@ -612,7 +612,15 @@ lv_obj_t *od_ui_create(void) {
 static bool stamp_visible(const od_view_t *v) {
     return !v->boot && v->time.phase==OD_DONE && !v->menu && !v->off_home && !v->resume_picker && !v->work_choice && !v->early_done && !v->hold_remaining_ms && od_setup_state(v->connected,v->synced,v->plan_ready)==OD_READY;
 }
+static bool waiting_visible(const od_view_t *v) {
+    return !v->boot && v->time.phase==OD_BEFORE && !v->menu && !v->off_home && !v->resume_picker && !v->work_choice && !v->early_done && !v->hold_remaining_ms && !v->feedback && od_setup_state(v->connected,v->synced,v->plan_ready)==OD_READY;
+}
+static int waiting_breathe(int ms) {return (int)lroundf(1-cosf(ms*2*3.14159265f/2500));}
 void od_ui_update(lv_obj_t *screen,const od_view_t *view) {
+    bool same_wait=waiting_visible(&s_view) && waiting_visible(view) && s_view.mood==view->mood && s_view.battery==view->battery && s_view.utc_us/60000000==view->utc_us/60000000 && s_view.time.start_utc==view->time.start_utc && s_view.settings.start_min==view->settings.start_min && s_view.settings.wait_min==view->settings.wait_min;
+    bool wait_pet_changed=waiting_breathe(s_view.animation_ms)!=waiting_breathe(view->animation_ms);
+    bool wait_clock_changed=(s_view.time.remaining_us+999999)/1000000!=(view->time.remaining_us+999999)/1000000;
+    bool wait_progress_changed=od_wait_percent(s_view.time.remaining_us,s_view.settings.start_min,s_view.settings.wait_min)!=od_wait_percent(view->time.remaining_us,view->settings.start_min,view->settings.wait_min);
     bool same_stamp=stamp_visible(&s_view) && stamp_visible(view) && s_view.feedback==view->feedback && s_view.overtime==view->overtime && !s_view.work_choice && !view->work_choice && s_view.mood==view->mood && s_view.battery==view->battery && s_view.utc_us/60000000==view->utc_us/60000000;
     int old_confetti_ms=s_view.confetti_ms;
     uint32_t old_confetti_seed=s_view.confetti_seed;
@@ -635,5 +643,9 @@ void od_ui_update(lv_obj_t *screen,const od_view_t *view) {
     } else if(same_effect) {
         // Keep transformed-image clipping aligned with the 40-row LCD buffer.
         lv_area_t area={0,80,239,319};lv_obj_invalidate_area(screen,&area);
+    } else if(same_wait) {
+        // Preserve rotated-clock clipping on the 40-row LCD buffer.
+        if(wait_pet_changed || wait_clock_changed){lv_area_t area={0,120,239,239};lv_obj_invalidate_area(screen,&area);}
+        if(wait_progress_changed){lv_area_t area={17,259,222,280};lv_obj_invalidate_area(screen,&area);}
     } else lv_obj_invalidate(screen);
 }
