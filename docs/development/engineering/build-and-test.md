@@ -169,3 +169,15 @@ Hardware-affecting changes must also run the applicable on-device checklist in t
 Never upload the app-only `build/FoloToy-AI-Passport.bin` to the community. Only
 the validated `build/FoloToy-AI-Passport-full.bin` contains the complete checked
 firmware layout.
+
+## Product-named exports
+
+The Off Duty Club gate also exports `build/products/<full-sha>/Off-Duty-Club-<version>-full.bin`, matching `.elf` and `.map` files, and a JSON checksum manifest. The version comes from the verified firmware descriptor. The bytes are copied from the checked archive, so the merged firmware and ELF hashes remain unchanged. The original content-addressed archive remains available under `build/firmware/`; existing archives keep their filenames and can still be verified. CI uploads only the product-named merged `.bin`, never the debug files.
+
+To export an existing verified archive without rebuilding:
+
+```bash
+python3 tools/archive_firmware.py export build/firmware/<full-sha> --name Off-Duty-Club
+```
+
+Export does not flash a device. The full image is for writing from `0x0`; preserving existing settings still requires the compatible segmented-flash procedure in the firmware-layout guide.

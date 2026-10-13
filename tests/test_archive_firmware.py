@@ -129,6 +129,32 @@ class FirmwareArchiveTest(unittest.TestCase):
         self.assertFalse((directory / "sdkconfig").exists())
         self.assertFalse((directory / "build.log").exists())
 
+    def test_product_export_keeps_verified_bytes_and_rejects_collisions(self) -> None:
+        archive = self.create()
+        output = self.root / "products"
+        product = ARCHIVE.export_product(archive, output, "Off-Duty-Club")
+        prefix = "Off-Duty-Club-fixture-version"
+        for source, renamed in ((self.full_name, f"{prefix}-full.bin"),
+                                (self.elf_name, f"{prefix}.elf"),
+                                (self.map_name, f"{prefix}.map")):
+            self.assertEqual((product / renamed).read_bytes(), (archive / source).read_bytes())
+        receipt = json.loads((product / f"{prefix}-manifest.json").read_text())
+        self.assertEqual(receipt["flash_offset"], 0)
+        self.assertEqual(receipt["full_bin_sha256"], archive.name)
+        self.assertEqual(ARCHIVE.export_product(archive, output, "Off-Duty-Club"), product)
+        (product / f"{prefix}-full.bin").write_bytes(b"unexpected")
+        with self.assertRaisesRegex(ValueError, "existing product file differs"):
+            ARCHIVE.export_product(archive, output, "Off-Duty-Club")
+
+    def test_product_export_rejects_unsafe_name_and_corrupt_source(self) -> None:
+        archive = self.create()
+        for name in ("../escape", "bad/name", "..", ""):
+            with self.assertRaises(ValueError):
+                ARCHIVE.export_product(archive, self.root / "products", name)
+        (archive / self.full_name).write_bytes(b"corrupt")
+        with self.assertRaises(ValueError):
+            ARCHIVE.export_product(archive, self.root / "products", "Off-Duty-Club")
+
     def test_repeat_verifies_without_rewriting_existing_archive(self) -> None:
         directory = self.create()
         before = {path: (path.stat().st_ino, path.stat().st_mtime_ns) for path in directory.rglob("*")}

@@ -102,6 +102,11 @@ run_firmware_checks() (
     install -m 0644 \
         "${validation_build_dir}/FoloToy-AI-Passport-full.bin" \
         "${repo_root}/build/FoloToy-AI-Passport-full.bin"
+    local firmware_sha
+    firmware_sha="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "${validation_build_dir}/FoloToy-AI-Passport-full.bin")"
+    PYTHONDONTWRITEBYTECODE=1 python3 tools/archive_firmware.py export \
+        "${repo_root}/build/firmware/${firmware_sha}" --name Off-Duty-Club \
+        --output-root "${repo_root}/build/products"
     echo "Firmware build: PASS"
 )
 

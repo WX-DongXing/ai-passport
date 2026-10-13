@@ -144,3 +144,15 @@ cc -std=c11 -Wall -Wextra -Werror -Imain \
 
 社区只能上传验证通过的 `build/FoloToy-AI-Passport-full.bin`，不得上传应用单镜像
 `build/FoloToy-AI-Passport.bin`，后者不包含完整且经校验的固件布局。
+
+## 产品名称产物
+
+下班俱乐部门禁还会导出 `build/products/<full-sha>/Off-Duty-Club-<version>-full.bin`、匹配的 `.elf` 与 `.map` 文件及 JSON 校验清单。版本号取自已验证固件的描述信息。文件从校验后的归档复制，合并固件与 ELF 的哈希不变。原内容寻址归档仍保存在 `build/firmware/`；历史归档保留原名称，仍可校验。CI 只上传产品名称的合并 `.bin`，不上传调试文件。
+
+无需重新构建，即可导出已有的已验证归档：
+
+```bash
+python3 tools/archive_firmware.py export build/firmware/<full-sha> --name Off-Duty-Club
+```
+
+导出不会烧录设备。完整镜像用于从 `0x0` 写入；保留现有设置仍需按照固件布局指南采用兼容的分段烧录流程。

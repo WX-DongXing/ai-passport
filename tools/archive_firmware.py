@@ -319,6 +319,53 @@ def create_archive(build_dir: Path, archive_root: Path) -> Path:
     return destination
 
 
+def export_product(archive_dir: Path, output_root: Path, name: str) -> Path:
+    """Export product-named copies from an immutable, verified debug archive."""
+    manifest = verify_archive(archive_dir)
+    version = manifest["app_descriptor"]["version"]
+    for value in (name, version):
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", value) or ".." in value:
+            raise ValueError("product name and version must be safe filename components")
+    prefix = f"{name}-{version}"
+    destination = safe_path(output_root / manifest["full_bin_sha256"])
+    destination.mkdir(parents=True, exist_ok=True)
+    files = {}
+    for original, renamed in (
+        (FULL_BIN, f"{prefix}-full.bin"),
+        (f"{APP}.elf", f"{prefix}.elf"),
+        (f"{APP}.map", f"{prefix}.map"),
+    ):
+        data = read_artifact(archive_dir, original)
+        digest = hashlib.sha256(data).hexdigest()
+        if digest != manifest["files"][original]["sha256"]:
+            raise ValueError("archive changed during product export")
+        target = safe_path(destination / renamed)
+        if target.exists():
+            if read_artifact(destination, renamed) != data:
+                raise ValueError(f"existing product file differs: {renamed}")
+        else:
+            with target.open("xb") as output:
+                output.write(data)
+        if hashlib.sha256(read_artifact(destination, renamed)).hexdigest() != digest:
+            raise ValueError(f"exported product file differs: {renamed}")
+        files[renamed] = {**manifest["files"][original], "source": original}
+    receipt = {
+        "product": name, "version": version, "flash_offset": 0,
+        "full_bin_sha256": manifest["full_bin_sha256"],
+        "app_elf_sha256": manifest["app_elf_sha256"], "files": files,
+    }
+    receipt_name = f"{prefix}-manifest.json"
+    data = (json.dumps(receipt, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    target = safe_path(destination / receipt_name)
+    if target.exists():
+        if read_artifact(destination, receipt_name) != data:
+            raise ValueError("existing product manifest differs")
+    else:
+        with target.open("xb") as output:
+            output.write(data)
+    return destination
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -327,11 +374,18 @@ def main(argv: list[str] | None = None) -> int:
     create.add_argument("--archive-root", type=Path, default=Path("build/firmware"))
     verify = commands.add_parser("verify", help="verify an existing archive without writing")
     verify.add_argument("archive_dir", type=Path)
+    export = commands.add_parser("export", help="export verified product-named firmware and debug files")
+    export.add_argument("archive_dir", type=Path)
+    export.add_argument("--name", required=True)
+    export.add_argument("--output-root", type=Path, default=Path("build/products"))
     args = parser.parse_args(argv)
     try:
         if args.command == "create":
             directory = create_archive(args.build_dir, args.archive_root)
             print(f"Firmware debug archive: {directory}")
+        elif args.command == "export":
+            directory = export_product(args.archive_dir, args.output_root, args.name)
+            print(f"Product firmware package: {directory}")
         else:
             verify_archive(args.archive_dir)
             print(f"Firmware debug archive: PASS ({args.archive_dir})")

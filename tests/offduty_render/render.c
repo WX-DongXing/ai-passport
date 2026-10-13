@@ -1,6 +1,8 @@
 #include "offduty_ui.h"
+#include "offduty_theme.h"
 #include "src/misc/lv_text_private.h"
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,14 +47,31 @@ static void render(lv_obj_t *scr,od_view_t *view,const char *name) {
     }
 }
 static void check_relax_center(int mood) {
-    const uint32_t body[]={0xa3dec0,0xffae8d,0xa3dec0,0xa3dec0,0x8dbcec,0xf4aeca,0xe5ecd3,0xff805c};
-    uint16_t color=lv_color_to_u16(lv_color_hex(body[mood]));int left=240,right=-1;
+    uint16_t color=lv_color_to_u16(lv_color_hex(od_themes[mood].pet));int left=240,right=-1;
     for(int y=112;y<250;y++)for(int x=0;x<240;x++)if(pixels[y*240+x]==color) {
         if(x<left)left=x;if(x>right)right=x;
     }
     assert(right>=left && abs(left+right-239)<=20);
 }
+static double luminance(uint32_t rgb) {
+    double channel[3];
+    for(int i=0;i<3;i++) {
+        double value=((rgb>>(16-i*8))&255)/255.0;
+        channel[i]=value<=0.04045?value/12.92:pow((value+0.055)/1.055,2.4);
+    }
+    return channel[0]*0.2126+channel[1]*0.7152+channel[2]*0.0722;
+}
+static void check_theme_contrast(void) {
+    for(int mood=0;mood<8;mood++) {
+        const od_theme_t *theme=&od_themes[mood];
+        const uint32_t backgrounds[]={theme->paper,theme->ticket,theme->seal};
+        for(unsigned i=0;i<sizeof(backgrounds)/sizeof(backgrounds[0]);i++)
+            assert((luminance(backgrounds[i])+0.05)/(luminance(theme->ink)+0.05)>=4.5);
+    }
+    puts("Eight mood themes, body and ribbon text contrast: PASS");
+}
 int main(int argc,char **argv) {
+    check_theme_contrast();
     lv_init();lv_display_t *display=lv_display_create(240,320);assert(display);
     lv_display_set_color_format(display,LV_COLOR_FORMAT_RGB565);
     lv_display_set_buffers(display,draw_buffer,NULL,sizeof(draw_buffer),LV_DISPLAY_RENDER_MODE_PARTIAL);
@@ -87,16 +106,15 @@ int main(int argc,char **argv) {
     v.mood=3;v.animation_ms=100;render(scr,&v,"pet-awake");
     uint16_t awake[240*320];memcpy(awake,pixels,sizeof(awake));v.animation_ms=4350;render(scr,&v,"pet-blink");assert(memcmp(awake,pixels,sizeof(awake))!=0);
     v.animation_ms=9500;render(scr,&v,"pet-wave");assert(memcmp(awake,pixels,sizeof(awake))!=0);v.animation_ms=1200;
-    const uint32_t tag_colors[]={0xb6a6ed,0xff9b76,0xeed068,0x91cbb2,0x8dbcec,0xeea6c6,0xa6bf87,0xffa078};
     for(int i=0;i<8;i++) {
         v.mood=i;snprintf(name,sizeof(name),"mood-%d",i);render(scr,&v,name);
-        lv_color_t tag=lv_color_hex(tag_colors[i]);assert(pixels[151*240+45]==lv_color_to_u16(tag));
+        lv_color_t tag=lv_color_hex(od_themes[i].seal);assert(pixels[151*240+45]==lv_color_to_u16(tag));
     }
     for(int i=0;i<5;i++) {
         v.egg=i;
         for(int age=0;age<3000;age+=200) {
             v.effect_ms=age;od_ui_update(scr,&v);lv_refr_now(NULL);
-            uint16_t paper=lv_color_to_u16(lv_color_hex(0xfff9e6));
+            uint16_t paper=lv_color_to_u16(lv_color_hex(od_themes[v.mood].paper));
             int left=240,right=-1,top=320,bottom=-1;
             for(int y=104;y<254;y++)for(int x=0;x<240;x++)if(pixels[y*240+x]!=paper) {
                 if(x<left)left=x;if(x>right)right=x;if(y<top)top=y;if(y>bottom)bottom=y;
@@ -187,13 +205,10 @@ int main(int argc,char **argv) {
     v.time=od_time_between(v.utc_us,v.utc_us/1000000+9*3600,v.utc_us/1000000+18*3600);render(scr,&v,"waiting-home");
     v.settings.start_min=1020;v.settings.end_min=1080;v.settings.wait_min=960;
     v.utc_us=(INT64_C(1791763200)+8*3600+42*60)*1000000;v.time=od_time_at(v.utc_us,&v.settings);
-    const uint32_t waiting_paper[]={0xe0e4eb,0xead9ce,0xdce5c9,0xf1e3ae,0xdce9e7,0xefdee5,0xe3dff0,0xeac7ad};
-    const uint32_t waiting_band[]={0x465268,0x765a56,0x35594c,0x746323,0x315d67,0x795367,0x5b5475,0x804a36};
-    const uint32_t waiting_pet[]={0xb4c6dd,0xd69e85,0x9bc6a7,0xe8c66a,0x9ccdc4,0xdda5bd,0xbeb3db,0xe79672};
     for(int mood=0;mood<8;mood++)for(int frame=0;frame<5;frame++) {
         v.mood=mood;v.animation_ms=frame*500;snprintf(name,sizeof(name),"waiting-charge-%d-%d",mood,frame);render(scr,&v,name);
         if(frame>0)assert(flushed_pixels<=28800);
-        uint16_t background=lv_color_to_u16(lv_color_hex(waiting_paper[mood])),band=lv_color_to_u16(lv_color_hex(waiting_band[mood])),pet=lv_color_to_u16(lv_color_hex(waiting_pet[mood]));
+        uint16_t background=lv_color_to_u16(lv_color_hex(od_themes[mood].paper)),band=lv_color_to_u16(lv_color_hex(od_themes[mood].ticket)),pet=lv_color_to_u16(lv_color_hex(od_themes[mood].pet));
         assert(pixels[40*240+5]==background && pixels[180*240+5]==band);
         int pet_pixels=0;for(int y=151;y<215;y++)for(int x=164;x<219;x++)if(pixels[y*240+x]==pet)pet_pixels++;
         assert(pet_pixels>=100);
