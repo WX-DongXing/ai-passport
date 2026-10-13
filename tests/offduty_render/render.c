@@ -100,9 +100,10 @@ int main(int argc,char **argv) {
     for(int ms=0;ms<3000;ms+=100){v.boot_ms=ms;od_ui_update(scr,&v);lv_refr_now(NULL);}
     const int boot_frames[]={0,900,1500,2200,2999};
     for(unsigned i=0;i<sizeof(boot_frames)/sizeof(boot_frames[0]);i++){v.boot_ms=boot_frames[i];snprintf(name,sizeof(name),"boot-%d",v.boot_ms);render(scr,&v,name);}
+    assert(pixels[50*240+5]==lv_color_to_u16(lv_color_hex(0xf7f3e8)));
     v.boot=false;render(scr,&v,"boot-to-work");
     v.connected=false;v.synced=false;v.plan_ready=false;render(scr,&v,"welcome-wifi");
-    v.connected=true;render(scr,&v,"welcome-time");v.synced=true;render(scr,&v,"welcome-plan");v.plan_ready=true;
+    v.connected=true;render(scr,&v,"welcome-time");assert(pixels[50*240+5]==lv_color_to_u16(lv_color_hex(0xd5c8f3)));v.synced=true;render(scr,&v,"welcome-plan");v.plan_ready=true;
     v.mood=3;v.animation_ms=100;render(scr,&v,"pet-awake");
     uint16_t awake[240*320];memcpy(awake,pixels,sizeof(awake));v.animation_ms=4350;render(scr,&v,"pet-blink");assert(memcmp(awake,pixels,sizeof(awake))!=0);
     v.animation_ms=9500;render(scr,&v,"pet-wave");assert(memcmp(awake,pixels,sizeof(awake))!=0);v.animation_ms=1200;
@@ -152,6 +153,8 @@ int main(int argc,char **argv) {
     uint16_t qr[123*123];
     for(int y=0;y<123;y++)memcpy(qr+y*123,pixels+(86+y)*240+58,123*sizeof(uint16_t));
     v.phone_connected=true;render(scr,&v,"settings-address");
+    assert(pixels[50*240+5]==lv_color_to_u16(lv_color_hex(od_themes[0].paper)));
+    assert(pixels[241*240+19]==lv_color_to_u16(lv_color_hex(od_themes[0].accent)));
     for(int y=0;y<123;y++)assert(!memcmp(qr+y*123,pixels+(86+y)*240+58,123*sizeof(uint16_t)));
     static uint16_t before_feedback[240*320];memcpy(before_feedback,pixels,sizeof(pixels));
     for(int result=1;result<=3;result++) {

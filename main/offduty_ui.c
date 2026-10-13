@@ -42,13 +42,16 @@ LV_IMAGE_DECLARE(od_stamp_4);
 LV_IMAGE_DECLARE(od_stamp_5);
 LV_IMAGE_DECLARE(od_stamp_6);
 LV_IMAGE_DECLARE(od_stamp_7);
+LV_IMAGE_DECLARE(od_boot_pet);
 LV_IMAGE_DECLARE(od_pet_0);LV_IMAGE_DECLARE(od_pet_1);LV_IMAGE_DECLARE(od_pet_2);LV_IMAGE_DECLARE(od_pet_3);
 LV_IMAGE_DECLARE(od_pet_4);LV_IMAGE_DECLARE(od_pet_5);LV_IMAGE_DECLARE(od_pet_6);LV_IMAGE_DECLARE(od_pet_7);
 LV_IMAGE_DECLARE(od_pet_rest_0);LV_IMAGE_DECLARE(od_pet_rest_1);LV_IMAGE_DECLARE(od_pet_rest_2);LV_IMAGE_DECLARE(od_pet_rest_3);
 LV_IMAGE_DECLARE(od_pet_rest_4);LV_IMAGE_DECLARE(od_pet_rest_5);LV_IMAGE_DECLARE(od_pet_rest_6);LV_IMAGE_DECLARE(od_pet_rest_7);
 static void egg(void);
 static uint32_t INK=0x241b34;
-#define THEME (od_themes[s_view.mood])
+static const od_theme_t od_setup_theme={0xfff9e6,0xc2ead4,0x241b34,0xff9c90,0xa3dec0,0x81cfa9,0xff805c,0x9474d3};
+static const od_theme_t *s_theme=&od_themes[0];
+#define THEME (*s_theme)
 #define PAPER (THEME.paper)
 static const char *s_mood[]={"困困中","努力绷住","摸鱼中","元气满格","专注结界","饿饿待投喂","放空一下","暴走模式"};
 static const char *s_quote[]={"灵魂还在被窝加载中。","问题不大，还能再撑一下。","人坐在工位，心已在地铁。","做完这一点，就离自由更近。","别打扰，正在消灭待办。","脑子里只剩晚饭菜单。","短暂离线，也是充电。","今天的 KPI：准点撤退。"};
@@ -152,7 +155,7 @@ static void boot(void) {
     rect(58,181,125,83,0xe5f0e1,42,0);rect(74,263,93,7,0xe4e1d7,4,0);
     const int pet_at[]={540,1080,1380,1650,1950,2280,2610,3000};
     const float pet_opacity[]={0,1,1,1,1,1,1,1},pet_x[]={70,-3,0,0,0,0,0,0},pet_angle[]={15,-7,4,-3,0,0,0,0},pet_sx[]={.9f,1.04f,1,1,1,1,1,1},pet_sy[]={.9f,1.04f,1,1,.95f,1,1,1},pet_y[]={0,0,0,0,0,-7,0,0};
-    lv_draw_image_dsc_t pet;lv_draw_image_dsc_init(&pet);pet.src=&od_pet_3;pet.pivot=(lv_point_t){36,88};pet.antialias=true;
+    lv_draw_image_dsc_t pet;lv_draw_image_dsc_init(&pet);pet.src=&od_boot_pet;pet.pivot=(lv_point_t){36,88};pet.antialias=true;
     pet.rotation=(int)lroundf(boot_tween(pet_at,pet_angle,8,ms)*10+3600)%3600;
     pet.scale_x=lroundf(256*boot_tween(pet_at,pet_sx,8,ms));pet.scale_y=lroundf(256*boot_tween(pet_at,pet_sy,8,ms));pet.opa=lroundf(255*boot_tween(pet_at,pet_opacity,8,ms));
     int x=84+lroundf(boot_tween(pet_at,pet_x,8,ms)),y=166+lroundf(boot_tween(pet_at,pet_y,8,ms));lv_area_t target={x,y,x+72,y+91};lv_draw_image(s_layer,&pet,&target);
@@ -183,7 +186,8 @@ static void buddy(int x,int y,int mood,int ms,bool compact) {
     int gaze=(ms/6000)%3==1?2:(ms/6000)%3==2?-2:0;
     bool blink=ms%4700>=4300 && ms%4700<4450;
     bool wave=s_relax_mode<0 && ms%16000>=8800 && ms%16000<10200;
-    uint32_t body=s_view.boot?0xa3dec0:od_themes[mood].pet,shade=s_view.boot?0x81cfa9:od_themes[mood].shade;
+    bool setup=!s_view.menu && od_setup_state(s_view.connected,s_view.synced,s_view.plan_ready)!=OD_READY;
+    uint32_t body=setup?od_setup_theme.pet:od_themes[mood].pet,shade=setup?od_setup_theme.shade:od_themes[mood].shade;
     rect(x+9,y+66,18,8,INK,4,0); rect(x+44,y+66,18,8,INK,4,0);
     rect(x,y,73,70,shade,27,2);rect(x+2,y+2,61,60,body,25,0);
     if(s_relax_mode==1 || s_relax_mode==5 || mood==0 || mood==6) { line(x+18,y+28,x+29,y+29,INK,2); line(x+45,y+29,x+56,y+28,INK,2); }
@@ -191,7 +195,7 @@ static void buddy(int x,int y,int mood,int ms,bool compact) {
     else { rect(x+25+gaze,y+(blink?32:28),5,blink?2:9,INK,3,0); rect(x+43+gaze,y+(blink?32:28),5,blink||mood==2?2:9,INK,3,0); }
     if(mood==4) { rect(x+13,y+19,23,18,body,5,2); rect(x+40,y+19,23,18,body,5,2); line(x+36,y+27,x+40,y+27,INK,2); }
     if(mood==1) { line(x+16,y+17,x+28,y+22,INK,3); line(x+46,y+22,x+59,y+17,INK,3); }
-    uint32_t cheek=s_view.boot?0xff9c90:od_themes[mood].seal;
+    uint32_t cheek=setup?od_setup_theme.seal:od_themes[mood].seal;
     rect(x+14,y+40,12,5,cheek,3,0); rect(x+46,y+40,12,5,cheek,3,0);
     if(mood==0 || mood==5) rect(x+31,y+41,12,mood==5?17:12,INK,7,0);
     else if(mood==1) {lv_draw_arc_dsc_t d;lv_draw_arc_dsc_init(&d);d.center=(lv_point_t){x+38,y+51};d.radius=8;d.width=2;d.start_angle=180;d.end_angle=360;d.color=lv_color_hex(INK);arc(&d);}
@@ -204,7 +208,7 @@ static void buddy(int x,int y,int mood,int ms,bool compact) {
         for(int i=1;i<6;i++){d.p[0]=(lv_point_precise_t){x+21,y+6};d.p[1]=(lv_point_precise_t){x+21+points[i][0],y-18+points[i][1]};d.p[2]=(lv_point_precise_t){x+21+points[i+1][0],y-18+points[i+1][1]};for(int j=0;j<3;j++){d.p[j].x=scaled_x(d.p[j].x);d.p[j].y=scaled_y(d.p[j].y);}lv_draw_triangle(s_layer,&d);}
     }
     if(wave) {line(x-2,y+43,x-9,y+34+(int)(sinf(ms*.025f)*5),INK,3);rect(x-13,y+28+(int)(sinf(ms*.025f)*5),9,9,body,5,1);}
-    if(mood==0 && s_relax_mode<0 && s_view.time.phase!=OD_BEFORE) TXT(x+66,y-6,30,"Zz",&od_font_14,INK);
+    if(mood==0 && s_relax_mode<0 && s_view.time.phase!=OD_BEFORE && od_setup_state(s_view.connected,s_view.synced,s_view.plan_ready)==OD_READY) TXT(x+66,y-6,30,"Zz",&od_font_14,INK);
     s_scale=s_scale_y=1.f;
 }
 
@@ -515,7 +519,8 @@ static void menu(void) {
         rect(left,86,width,width,0xffffff,0,0);
         for(int y=0;y<size;y++)for(int x=0;x<size;x++)if(qrcodegen_getModule(s_qr,x,y))rect(left+(x+4)*scale,86+(y+4)*scale,scale,scale,0,0,0);
         CENTER(17,218,206,s_view.ap_name,&od_font_10,INK);
-        rect(17,238,206,30,THEME.ticket,8,1);
+        rect(17,238,206,30,THEME.ticket,6,0);
+        rect(17,238,3,30,THEME.accent,0,0);
         CENTER(22,246,196,"http://192.168.4.1",&od_font_12,INK);
         CENTER(17,276,206,s_view.phone_connected?(s_view.connected?"Wi-Fi 已连接 · 可调整设置":"浏览器打开地址，配网与设置"):"连上热点后，在浏览器打开地址",&od_font_10,INK);
         CENTER(17,298,206,"OK 关闭热点",&od_font_10,INK); return;
@@ -548,15 +553,15 @@ static void menu(void) {
 static void welcome(void) {
     od_setup_t stage=od_setup_state(s_view.connected,s_view.synced,s_view.plan_ready);
     bool plan=stage==OD_NEED_PLAN;
-    rect(0,0,240,320,PAPER,0,0);status(INK,false);
+    rect(0,0,240,320,plan?0xf6e8ce:0xd5c8f3,0,0);status(INK,false);
     TXT(17,43,206,"HELLO / 自由准备中",&od_font_10,INK);
     TXT(17,66,122,plan?"把自由":"先校准",&od_font_23,INK);
     TXT(17,94,122,plan?"定个点。":"时间。",&od_font_23,INK);
-    buddy(149,82,s_view.mood,s_view.animation_ms,false);
+    buddy(149,82,3,s_view.animation_ms,false);
     TXT(17,163,206,plan?"设置作息，开启你的下班倒数。":stage==OD_NEED_TIME?"正在对时，也可使用手机校时。":"连接热点，用手机校准时间。",&od_font_10,INK);
     for(int i=0;i<2;i++) {
         int y=187+i*35;bool ready=i==0?s_view.synced:s_view.plan_ready;
-        rect(17,y,206,29,ready?THEME.ticket:PAPER,7,0);
+        rect(17,y,206,29,ready?0xc2ead4:PAPER,7,0);
         TXT(26,y+8,148,i==0?"01 / 网络或手机校时":"02 / 设置上下班时间",&od_font_10,INK);
         text(175,y+8,40,ready?"已完成":"待完成",&od_font_10,INK,LV_TEXT_ALIGN_RIGHT);
     }
@@ -567,8 +572,11 @@ static void welcome(void) {
 
 static void draw(lv_event_t *e) {
     s_layer=lv_event_get_layer(e);
+    bool setup=!s_view.menu && od_setup_state(s_view.connected,s_view.synced,s_view.plan_ready)!=OD_READY;
+    s_theme=setup?&od_setup_theme:&od_themes[s_view.menu==2?0:s_view.mood];
     INK=THEME.ink;
 #ifdef OD_PET_REFERENCE
+    s_theme=&od_themes[s_view.mood];INK=THEME.ink;
     s_relax_mode=s_view.relax;buddy(84,157,s_view.mood,0,false);s_relax_mode=-1;return;
 #endif
     if(s_view.boot) {INK=0x293534;boot();}

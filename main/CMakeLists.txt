@@ -5,6 +5,7 @@ idf_component_register(
          "offduty_net.c"
          "../assets/images/offduty/od_stamps.c"
          "../assets/images/offduty/od_pets.c"
+         "../assets/images/offduty/od_boot_pet.c"
          "../assets/fonts/offduty/od_font_9.c"
          "../assets/fonts/offduty/od_font_8.c"
          "../assets/fonts/offduty/od_font_11.c"
