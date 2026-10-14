@@ -127,6 +127,14 @@ static void rect(int x,int y,int w,int h,uint32_t color,int radius,int border) {
     x=scaled_x(x);y=scaled_y(y);w=scaled_size(w);h=(int)lroundf(h*s_scale_y);radius=scaled_size(radius);border=scaled_size(border);
     lv_draw_rect_dsc_t d; lv_draw_rect_dsc_init(&d);
     d.bg_color=lv_color_hex(color); d.radius=radius;
+    bool jelly=s_view.settings.theme==2 && s_theme!=&od_setup_theme && !s_view.boot;
+    if(jelly && ((color==PAPER && w==240 && h==320) || color==THEME.pet)) {
+        d.bg_grad.dir=LV_GRAD_DIR_VER;d.bg_grad.stops_count=2;
+        d.bg_grad.stops[0].color=lv_color_mix(lv_color_white(),lv_color_hex(color),color==PAPER?166:107);
+        d.bg_grad.stops[0].opa=LV_OPA_COVER;d.bg_grad.stops[0].frac=0;
+        d.bg_grad.stops[1].color=lv_color_hex(color==PAPER?THEME.ticket:color);
+        d.bg_grad.stops[1].opa=LV_OPA_COVER;d.bg_grad.stops[1].frac=255;
+    }
     d.border_width=border; d.border_color=lv_color_hex(INK);
     lv_area_t a={x,y,x+w-1,y+h-1}; lv_draw_rect(s_layer,&d,&a);
 }
@@ -240,7 +248,7 @@ static void buddy(int x,int y,int mood,int ms,bool compact) {
 #ifdef OD_PET_REFERENCE
     setup=false;
 #endif
-    od_theme_t pet_theme=od_theme_palette(s_view.settings.theme,mood);
+    od_theme_t pet_theme=od_theme_palette(s_view.settings.theme,mood);uint32_t page_ink=INK;if(!setup)INK=pet_theme.pet_ink;
     uint32_t body=setup?od_setup_theme.pet:pet_theme.pet,shade=setup?od_setup_theme.shade:pet_theme.shade;
     rect(x+9,y+66,18,8,INK,4,0); rect(x+44,y+66,18,8,INK,4,0);
     rect(x,y,73,70,shade,27,2);rect(x+2,y+2,61,60,body,25,0);
@@ -262,8 +270,9 @@ static void buddy(int x,int y,int mood,int ms,bool compact) {
         for(int i=1;i<6;i++){d.p[0]=(lv_point_precise_t){x+21,y+6};d.p[1]=(lv_point_precise_t){x+21+points[i][0],y-18+points[i][1]};d.p[2]=(lv_point_precise_t){x+21+points[i+1][0],y-18+points[i+1][1]};for(int j=0;j<3;j++){d.p[j].x=scaled_x(d.p[j].x);d.p[j].y=scaled_y(d.p[j].y);}lv_draw_triangle(s_layer,&d);}
     }
     if(wave) {line(x-2,y+43,x-9,y+34+(int)(sinf(ms*.025f)*5),INK,3);rect(x-13,y+28+(int)(sinf(ms*.025f)*5),9,9,body,5,1);}
-    if(mood==0 && s_relax_mode<0 && s_view.time.phase!=OD_BEFORE && od_setup_state(s_view.connected,s_view.synced,s_view.plan_ready)==OD_READY) TXT(x+66,y-6,30,"Zz",&od_font_14,INK);
+    if(mood==0 && s_relax_mode<0 && s_view.time.phase!=OD_BEFORE && od_setup_state(s_view.connected,s_view.synced,s_view.plan_ready)==OD_READY) TXT(x+66,y-6,30,"Zz",&od_font_14,page_ink);
     s_scale=s_scale_y=1.f;
+    INK=page_ink;
 }
 
 static void home(void) {
@@ -279,7 +288,7 @@ static void home(void) {
     rect(73,207,96,9,THEME.ticket,6,0); buddy(84,142,s_view.mood,s_view.animation_ms,false);
     rect(17,148,58,25,THEME.seal,5,0);
     const char *tag=s_mood[s_view.mood];
-    CENTER(17,154,58,tag,&od_font_10,THEME.ink);
+    CENTER(17,154,58,tag,&od_font_10,THEME.seal_ink);
     line(182,133,182,145,THEME.accent,3); line(176,139,188,139,THEME.accent,3);
     const char *quote=s_quote[s_view.mood];
     CENTER(10,226,220,quote,&od_font_12,INK);
@@ -292,7 +301,7 @@ static void home(void) {
 
 static void ribbon(int x,int y,int w,int h,uint32_t bg,const char *label,int offset);
 static void waiting(void) {
-    uint32_t bg=PAPER,band=THEME.ticket,ink=INK,fg=INK;
+    uint32_t bg=PAPER,band=THEME.ticket,ink=INK,fg=THEME.block_ink;
     rect(0,0,240,320,bg,0,0);status(ink,false);
     char buf[64];snprintf(buf,sizeof(buf),"OFF DUTY CLUB / %s",s_wait_mood[s_view.mood]);TXT(17,42,206,buf,&od_font_8,ink);
     TXT(17,57,206,"本人目前",&od_wait_title,ink);TXT(17,88,206,"尚未营业。",&od_wait_title,ink);
@@ -330,8 +339,8 @@ static void ribbon(int x,int y,int w,int h,uint32_t bg,const char *label,int off
     // Rotate only these small strips, keeping the 48 KB LVGL pool bounded.
     s_layer=strip;
     rect(x,y,w,h,bg,0,0);
-    if(offset<0)CENTER(x,y+6,w,label,&od_font_10,INK);
-    else TXT(x-offset,y+6,470,label,&od_font_10,INK);
+    if(offset<0)CENTER(x,y+6,w,label,&od_font_10,bg==PAPER?THEME.ink:bg==THEME.seal?THEME.seal_ink:THEME.block_ink);
+    else TXT(x-offset,y+6,470,label,&od_font_10,bg==PAPER?THEME.ink:bg==THEME.seal?THEME.seal_ink:THEME.block_ink);
     s_layer=parent;
     lv_draw_image_dsc_t d;lv_draw_image_dsc_init(&d);
     d.src=strip;d.rotation=3570;d.pivot=(lv_point_t){w/2,h/2};d.antialias=true;
@@ -339,7 +348,7 @@ static void ribbon(int x,int y,int w,int h,uint32_t bg,const char *label,int off
 }
 static void final(void) {
     int sec=(s_view.time.remaining_us+999999)/1000000;
-    uint32_t bg=sec<=10?THEME.seal:THEME.ticket, fg=INK, accent=THEME.accent;
+    uint32_t bg=sec<=10?THEME.seal:THEME.ticket, fg=sec<=10?THEME.seal_ink:THEME.block_ink, accent=fg;
     rect(0,0,240,320,bg,0,0);
     int drift=s_view.animation_ms/50%28;
     for(int x=135;x<280;x+=28) line(x+drift,0,x+drift-110,320,THEME.pet,2);
@@ -396,8 +405,9 @@ static void done(void) {
         int x=17+(i?4+12*(i-1):0)*206/100,xx=17+(4+12*i)*206/100,tip=17+(i?10+12*(i-1):0)*206/100;
         d.p[0]=(lv_point_precise_t){x,253};d.p[1]=(lv_point_precise_t){xx,253};d.p[2]=(lv_point_precise_t){tip,261};lv_draw_triangle(s_layer,&d);
     }
-    lv_draw_label_dsc_t label;lv_draw_label_dsc_init(&label);label.font=&od_font_10;label.color=lv_color_hex(ink);label.text=s_view.overtime?"OVERTIME COMPLETE":"MISSION COMPLETE";label.letter_space=2;
+    lv_draw_label_dsc_t label;lv_draw_label_dsc_init(&label);label.font=&od_font_10;label.color=lv_color_hex(THEME.block_ink);label.text=s_view.overtime?"OVERTIME COMPLETE":"MISSION COMPLETE";label.letter_space=2;
     lv_area_t label_area={33,60,206,60+od_font_10.line_height-1};lv_draw_label(s_layer,&label,&label_area);
+    ink=THEME.block_ink;INK=ink;
     TXT(33,82,174,s_view.overtime?"本次加班":"今日打工",&od_font_29,ink);TXT(33,115,174,"到此为止。",&od_font_29,ink);
     for(int x=33;x<207;x+=5)line(x,163,x+2,163,ink,1);
     TXT(33,171,84,"工作已收尾",&od_font_11,ink);TXT(33,186,84,"快乐待领取",&od_font_11,ink);
@@ -413,9 +423,9 @@ static void done(void) {
         for(int i=0;i<32;i++) {
             float a=i*6.2831853f/32,b=(i+1)*6.2831853f/32;
             int x=172+(int)(cosf(a)*41),y=204+(int)(sinf(a)*33),xx=172+(int)(cosf(b)*41),yy=204+(int)(sinf(b)*33);
-            line(x,y,xx,yy,ink,2);
+            line(x,y,xx,yy,THEME.seal_ink,2);
         }
-        CENTER(134,188,77,"已下班",&od_font_21,ink);CENTER(134,214,77,"APPROVED",&od_font_9,ink);
+        CENTER(134,188,77,"已下班",&od_font_21,THEME.seal_ink);CENTER(134,214,77,"APPROVED",&od_font_9,THEME.seal_ink);
         s_layer=parent;lv_draw_image_dsc_t d;lv_draw_image_dsc_init(&d);d.src=stamp;d.rotation=3470;d.pivot=(lv_point_t){42,35};d.antialias=true;lv_draw_layer(parent,&d,&area);
     }
 #else
@@ -424,6 +434,7 @@ static void done(void) {
     lv_area_t stamp_area={123,160,222,249};lv_draw_image(s_layer,&image,&stamp_area);
 #endif
     buddy(37,mood==6 || mood==7?210:204,mood,s_view.animation_ms,true);
+    ink=THEME.ink;INK=ink;
     CENTER(17,275,206,"签收快乐，不签收加班。",&od_font_11,ink);
     TXT(17,299,100,"↑↓ 放彩带",&od_font_9,ink);text(153,299,70,"OK 下班",&od_font_9,ink,LV_TEXT_ALIGN_RIGHT);
     confetti();
@@ -431,7 +442,7 @@ static void done(void) {
 }
 
 static void hold(void) {
-    int remaining=s_view.hold_remaining_ms;
+    int remaining=s_view.hold_remaining_ms;INK=THEME.block_ink;
     rect(0,0,240,320,THEME.ticket,0,0); status(INK,true);
     rect(17,12,160,15,THEME.ticket,0,0);TXT(17,12,160,"EARLY EXIT / HOLD",&od_font_10,INK);
     TXT(19,47,202,"提前下班",&od_font_29,INK);
@@ -443,6 +454,7 @@ static void hold(void) {
     CENTER(19,301,202,"松手取消 / 归零直接下班",&od_font_9,INK);
 }
 static void early_done(void) {
+    INK=THEME.block_ink;
     rect(0,0,240,320,THEME.ticket,0,0);status(INK,false);
     TXT(17,49,206,"EARLY EXIT / 偷跑成功",&od_font_10,INK);
     TXT(17,82,206,"一键下班！",&od_font_29,INK);
@@ -462,7 +474,7 @@ static void off_home(void) {
     char buf[16];snprintf(buf,sizeof(buf),"%02d:%02d:%02d",sec/3600,sec/60%60,sec%60);
     TXT(17,124,206,buf,&od_digits_35,INK);
     buddy(84,186,s_view.mood,s_view.animation_ms,false);
-    rect(17,194,58,23,THEME.ticket,6,1);CENTER(17,200,58,"下班模式",&od_font_10,INK);
+    rect(17,194,58,23,THEME.ticket,6,1);CENTER(17,200,58,"下班模式",&od_font_10,THEME.block_ink);
     CENTER(17,266,206,"工作暂停，快乐继续。",&od_font_12,INK);
     line(17,287,223,287,THEME.ticket,1);
     TXT(17,300,70,"↑ 上班 / 加班",&od_font_9,INK);CENTER(85,300,70,"↓ 放松一下",&od_font_9,INK);text(170,300,53,"OK 设置",&od_font_9,INK,LV_TEXT_ALIGN_RIGHT);
@@ -474,8 +486,8 @@ static void work_choice(void) {
     for(int i=0;i<2;i++) {
         int y=126+i*75;
         rect(17,y,206,62,i==s_view.work_option?THEME.ticket:PAPER,10,1);
-        TXT(29,y+10,182,i?"加个班":"继续上班",&od_font_21,INK);
-        TXT(29,y+39,182,i?"独立倒计时 · 不改日常作息":"调节下班时间 · 同步到设置",&od_font_10,INK);
+        TXT(29,y+10,182,i?"加个班":"继续上班",&od_font_21,i==s_view.work_option?THEME.block_ink:INK);
+        TXT(29,y+39,182,i?"独立倒计时 · 不改日常作息":"调节下班时间 · 同步到设置",&od_font_10,i==s_view.work_option?THEME.block_ink:INK);
     }
     CENTER(17,285,206,"↑ ↓ 选择 · OK 确认",&od_font_11,INK);
     CENTER(17,306,206,"长按 OK 取消",&od_font_9,INK);
@@ -487,15 +499,15 @@ static void resume_picker(void) {
     TXT(17,112,206,s_view.overtime_picker?"只记这一段，不改变日常作息。":"重新上班前，先定好自由时刻。",&od_font_10,INK);
     rect(17,148,206,76,THEME.ticket,12,1);
     char clock[8];clock_text(clock,s_view.overtime_picker?s_view.overtime_min:s_view.resume_end_min);
-    CENTER(17,s_view.overtime_picker?157:165,206,clock,&od_digits_35,INK);
+    CENTER(17,s_view.overtime_picker?157:165,206,clock,&od_digits_35,THEME.block_ink);
     if(s_view.overtime_picker) {
         char end[8],label[32];clock_text(end,(s_view.utc_us/1000000+28800+s_view.overtime_min*60)%86400/60);
         snprintf(label,sizeof(label),"%s %s 结束",((s_view.utc_us/1000000+28800)%86400+s_view.overtime_min*60)>=86400?"次日":"预计",end);
-        CENTER(17,205,206,label,&od_font_10,INK);
+        CENTER(17,205,206,label,&od_font_10,THEME.block_ink);
     }
     CENTER(17,238,206,s_view.notice==2?"上下班时间不能相同":s_view.notice==1?"保存失败，请重试":s_view.overtime_picker?"加班时长 · 每次调整半小时":"每次调整 15 分钟 · 同步到设置",&od_font_10,INK);
     rect(17,269,206,25,THEME.ticket,8,0);
-    CENTER(17,275,206,s_view.overtime_picker?"OK 开始本次加班":"OK 保存并上班",&od_font_11,INK);
+    CENTER(17,275,206,s_view.overtime_picker?"OK 开始本次加班":"OK 保存并上班",&od_font_11,THEME.block_ink);
     CENTER(17,306,206,"↑ ↓ 调整 / 长按 OK 取消",&od_font_9,INK);
 }
 static void break_footer(bool after_work) {
@@ -575,7 +587,7 @@ static void menu(void) {
         CENTER(17,218,206,s_view.ap_name,&od_font_10,INK);
         rect(17,238,206,30,THEME.ticket,6,0);
         rect(17,238,3,30,THEME.accent,0,0);
-        CENTER(22,246,196,"http://192.168.4.1",&od_font_12,INK);
+        CENTER(22,246,196,"http://192.168.4.1",&od_font_12,THEME.block_ink);
         CENTER(17,276,206,s_view.phone_connected?(s_view.connected?"Wi-Fi 已连接 · 可调整设置":"浏览器打开地址，配网与设置"):"连上热点后，在浏览器打开地址",&od_font_10,INK);
         CENTER(17,298,206,"OK 关闭热点",&od_font_10,INK); return;
     }
@@ -583,7 +595,8 @@ static void menu(void) {
     for(int i=first;i<first+5 && i<OD_MENU_ROWS;i++) {
         int y=78+(i-first)*38;
         if(i==s_view.selected) rect(12,y-4,216,34,s_view.edit?THEME.seal:THEME.ticket,8,1);
-        TXT(20,y+7,108,s_menu[i],&od_font_12,INK); value[0]=0;
+        uint32_t row_ink=i==s_view.selected?(s_view.edit?THEME.seal_ink:THEME.block_ink):INK;
+        TXT(20,y+7,108,s_menu[i],&od_font_12,row_ink); value[0]=0;
         switch(i) {
         case 0:clock_text(value,s_view.settings.start_min);break;
         case 1:clock_text(value,s_view.settings.end_min);break;
@@ -599,7 +612,7 @@ static void menu(void) {
         case 10:strcpy(value,s_view.selected==10 && s_view.edit?"确认删除？":"需确认");break;
         default:break;
         }
-        text(126,y+7,92,value,&od_font_12,INK,LV_TEXT_ALIGN_RIGHT);
+        text(126,y+7,92,value,&od_font_12,row_ink,LV_TEXT_ALIGN_RIGHT);
     }
     CENTER(8,278,224,s_view.notice==1?"保存失败，请重试":s_view.notice==2?"上下班时间不能相同":s_view.notice==3?"网络启动失败，请重启":s_view.edit?(s_view.selected==10?"OK 确认忘记 / ↑↓ 取消":"↑↓ 调整 · OK 保存"):"↑↓ 选择 · OK 编辑",&od_font_11,INK);
     CENTER(8,303,224,"长按 OK 返回",&od_font_11,INK);
@@ -647,11 +660,12 @@ static void draw(lv_event_t *e) {
     else if(s_view.time.phase==OD_DONE) done();
     else if(s_view.time.phase==OD_BEFORE) waiting();
     else {if(s_view.egg>=0)egg();else home();}
+    INK=THEME.ink;
     if(s_view.feedback && !s_view.boot) {
         const char *messages[]={"","设置已保存","保存失败，请重试","手机校准完成"};
         rect(8,274,224,46,PAPER,0,0);
         rect(17,277,206,28,PAPER,8,1);
-        CENTER(17,284,206,messages[s_view.feedback],&od_font_12,s_view.feedback==2?0x914123:INK);
+        CENTER(17,284,206,messages[s_view.feedback],&od_font_12,INK);
     }
 }
 lv_obj_t *od_ui_create(void) {

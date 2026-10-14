@@ -48,7 +48,7 @@ int main(void) {
     assert(strstr(phone_html,"class=signature>OFF DUTY CLUB"));
     assert(strstr(phone_html,"action=/scan") && strstr(phone_html,"action=/settings"));
     assert(strstr(phone_html,"data-password=wifi-password") && strstr(phone_html,"data-password=hidden-password"));
-    assert(strstr(phone_html,"name=theme") && strstr(phone_html,"奶油晴日") && strstr(phone_html,"海盐晴空") && strstr(phone_html,"莓果汽水"));
+    assert(strstr(phone_html,"name=theme") && strstr(phone_html,"电光撞色") && strstr(phone_html,"复古彩印") && strstr(phone_html,"果冻透光"));
     assert(strstr(phone_html,"name=eggs") && strstr(phone_html,"name=screen_off") && !strstr(phone_html,"name=idle"));
     assert(strstr(phone_html,"确认忘记网络并关闭热点</button></form></details></section>"));
     assert(strstr(phone_html,"</main></body></html>"));
@@ -156,10 +156,11 @@ int main(void) {
     const char *form="start=09%3A00&end=18%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=08%3A00&token=0123456789abcdef0123456789abcdef";
     od_settings_t themed=s;themed.theme=2;
     assert(od_settings_blob(&themed,sizeof(themed),&remote) && remote.theme==2);
-    assert(od_settings_blob(&themed,offsetof(od_settings_t,theme),&remote) && remote.theme==0 && remote.start_min==themed.start_min);
+    assert(od_settings_blob(&themed,offsetof(od_settings_t,theme),&remote) && remote.theme==1 && remote.start_min==themed.start_min);
     themed.theme=3;assert(!od_settings_valid(&themed));
     assert(od_settings_form("start=09%3A00&end=18%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=08%3A00&theme=2&token=0123456789abcdef0123456789abcdef",&remote,settings_token) && remote.theme==2);
     assert(!od_settings_form("start=09%3A00&end=18%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=08%3A00&theme=3&token=0123456789abcdef0123456789abcdef",&remote,settings_token));
+    assert(s.theme==1);
     assert(od_settings_form(form,&remote,settings_token) && !memcmp(&s,&remote,sizeof(s)));
     assert(!od_settings_form("start=09%3A00&end=18%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=09%3A00&token=0123456789abcdef0123456789abcdef",&remote,settings_token));
     assert(!od_settings_form("start=22%3A00&end=06%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=23%3A00&token=0123456789abcdef0123456789abcdef",&remote,settings_token));

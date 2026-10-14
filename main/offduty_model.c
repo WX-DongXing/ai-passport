@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 void od_settings_default(od_settings_t *s) {
-    *s = (od_settings_t){540, 1080, 1200, 300, 75, 50, 0, 1, 480, 0};
+    *s = (od_settings_t){540, 1080, 1200, 300, 75, 50, 0, 1, 480, 1};
 }
 void od_wait_link(od_settings_t *s) {
     int rest=(s->start_min+1440-s->end_min)%1440;
@@ -164,7 +164,7 @@ static bool decode(const char *p, size_t len, char *out, size_t cap) {
 
 bool od_settings_form(const char *body,od_settings_t *settings,char token[33]) {
     const char *names[]={"start","end","brightness","volume","screen_off","eggs","token","wait","theme"};
-    unsigned seen=0;unsigned values[9]={0};token[0]=0;
+    unsigned seen=0;unsigned values[9]={[8]=1};token[0]=0;
     if(!body || strlen(body)>512) return false;
     for(const char *p=body;*p;) {
         const char *end=strchr(p,'&');if(!end)end=p+strlen(p);
