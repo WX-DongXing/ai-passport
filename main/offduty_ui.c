@@ -47,9 +47,59 @@ LV_IMAGE_DECLARE(od_pet_0);LV_IMAGE_DECLARE(od_pet_1);LV_IMAGE_DECLARE(od_pet_2)
 LV_IMAGE_DECLARE(od_pet_4);LV_IMAGE_DECLARE(od_pet_5);LV_IMAGE_DECLARE(od_pet_6);LV_IMAGE_DECLARE(od_pet_7);
 LV_IMAGE_DECLARE(od_pet_rest_0);LV_IMAGE_DECLARE(od_pet_rest_1);LV_IMAGE_DECLARE(od_pet_rest_2);LV_IMAGE_DECLARE(od_pet_rest_3);
 LV_IMAGE_DECLARE(od_pet_rest_4);LV_IMAGE_DECLARE(od_pet_rest_5);LV_IMAGE_DECLARE(od_pet_rest_6);LV_IMAGE_DECLARE(od_pet_rest_7);
+extern const uint8_t od_pet_crop[3][2][8][2];
+LV_IMAGE_DECLARE(od_pet_t1_0);
+LV_IMAGE_DECLARE(od_pet_t1_1);
+LV_IMAGE_DECLARE(od_pet_t1_2);
+LV_IMAGE_DECLARE(od_pet_t1_3);
+LV_IMAGE_DECLARE(od_pet_t1_4);
+LV_IMAGE_DECLARE(od_pet_t1_5);
+LV_IMAGE_DECLARE(od_pet_t1_6);
+LV_IMAGE_DECLARE(od_pet_t1_7);
+LV_IMAGE_DECLARE(od_pet_t2_0);
+LV_IMAGE_DECLARE(od_pet_t2_1);
+LV_IMAGE_DECLARE(od_pet_t2_2);
+LV_IMAGE_DECLARE(od_pet_t2_3);
+LV_IMAGE_DECLARE(od_pet_t2_4);
+LV_IMAGE_DECLARE(od_pet_t2_5);
+LV_IMAGE_DECLARE(od_pet_t2_6);
+LV_IMAGE_DECLARE(od_pet_t2_7);
+LV_IMAGE_DECLARE(od_pet_rest_t1_0);
+LV_IMAGE_DECLARE(od_pet_rest_t1_1);
+LV_IMAGE_DECLARE(od_pet_rest_t1_2);
+LV_IMAGE_DECLARE(od_pet_rest_t1_3);
+LV_IMAGE_DECLARE(od_pet_rest_t1_4);
+LV_IMAGE_DECLARE(od_pet_rest_t1_5);
+LV_IMAGE_DECLARE(od_pet_rest_t1_6);
+LV_IMAGE_DECLARE(od_pet_rest_t1_7);
+LV_IMAGE_DECLARE(od_pet_rest_t2_0);
+LV_IMAGE_DECLARE(od_pet_rest_t2_1);
+LV_IMAGE_DECLARE(od_pet_rest_t2_2);
+LV_IMAGE_DECLARE(od_pet_rest_t2_3);
+LV_IMAGE_DECLARE(od_pet_rest_t2_4);
+LV_IMAGE_DECLARE(od_pet_rest_t2_5);
+LV_IMAGE_DECLARE(od_pet_rest_t2_6);
+LV_IMAGE_DECLARE(od_pet_rest_t2_7);
+LV_IMAGE_DECLARE(od_stamp_t1_0);
+LV_IMAGE_DECLARE(od_stamp_t1_1);
+LV_IMAGE_DECLARE(od_stamp_t1_2);
+LV_IMAGE_DECLARE(od_stamp_t1_3);
+LV_IMAGE_DECLARE(od_stamp_t1_4);
+LV_IMAGE_DECLARE(od_stamp_t1_5);
+LV_IMAGE_DECLARE(od_stamp_t1_6);
+LV_IMAGE_DECLARE(od_stamp_t1_7);
+LV_IMAGE_DECLARE(od_stamp_t2_0);
+LV_IMAGE_DECLARE(od_stamp_t2_1);
+LV_IMAGE_DECLARE(od_stamp_t2_2);
+LV_IMAGE_DECLARE(od_stamp_t2_3);
+LV_IMAGE_DECLARE(od_stamp_t2_4);
+LV_IMAGE_DECLARE(od_stamp_t2_5);
+LV_IMAGE_DECLARE(od_stamp_t2_6);
+LV_IMAGE_DECLARE(od_stamp_t2_7);
 static void egg(void);
 static uint32_t INK=0x241b34;
 static const od_theme_t od_setup_theme={0xfff9e6,0xc2ead4,0x241b34,0xff9c90,0xa3dec0,0x81cfa9,0xff805c,0x9474d3};
+static od_theme_t s_palette;
 static const od_theme_t *s_theme=&od_themes[0];
 #define THEME (*s_theme)
 #define PAPER (THEME.paper)
@@ -59,7 +109,7 @@ static const char *s_wait_mood[]={"困困","绷住","摸鱼","元气","专注","
 static const char *s_wait_copy[]={"再眯一会，到点叫我。","先深呼吸，开工不抢跑。","营业之前，先给自己放风。","快乐攒满，到点出发。","脑袋预热，暂不接单。","先填饱，再开始营业。","此刻只管发会儿呆。","先存体力，到点再冲。"};
 static const char *s_eggs[]={"摸鱼许可证","咖啡补给站","老板雷达","灵魂先下班","快乐预存成功"};
 static const char *s_egg_quote[]={"已批准：钓一条快乐小鱼。","今天的你，值得加一份奶。","别紧张，屏幕在认真工作。","肉身随后就到，请稍等。","今日快乐，正在排队到账。"};
-static const char *s_menu[]={"上班时间","下班时间","准备时间","屏幕亮度","声音大小","熄屏方式","随机彩蛋","连接 Wi-Fi","立即对时","对时状态","忘记网络","返回"};
+static const char *s_menu[]={"上班时间","下班时间","准备时间","屏幕亮度","声音大小","熄屏方式","随机彩蛋","连接 Wi-Fi","立即对时","对时状态","忘记网络","主题配色","返回"};
 const char *od_menu_name(int row) { return s_menu[row]; }
 
 static float s_scale=1.f,s_scale_y=1.f;
@@ -187,7 +237,11 @@ static void buddy(int x,int y,int mood,int ms,bool compact) {
     bool blink=ms%4700>=4300 && ms%4700<4450;
     bool wave=s_relax_mode<0 && ms%16000>=8800 && ms%16000<10200;
     bool setup=!s_view.menu && od_setup_state(s_view.connected,s_view.synced,s_view.plan_ready)!=OD_READY;
-    uint32_t body=setup?od_setup_theme.pet:od_themes[mood].pet,shade=setup?od_setup_theme.shade:od_themes[mood].shade;
+#ifdef OD_PET_REFERENCE
+    setup=false;
+#endif
+    od_theme_t pet_theme=od_theme_palette(s_view.settings.theme,mood);
+    uint32_t body=setup?od_setup_theme.pet:pet_theme.pet,shade=setup?od_setup_theme.shade:pet_theme.shade;
     rect(x+9,y+66,18,8,INK,4,0); rect(x+44,y+66,18,8,INK,4,0);
     rect(x,y,73,70,shade,27,2);rect(x+2,y+2,61,60,body,25,0);
     if(s_relax_mode==1 || s_relax_mode==5 || mood==0 || mood==6) { line(x+18,y+28,x+29,y+29,INK,2); line(x+45,y+29,x+56,y+28,INK,2); }
@@ -195,16 +249,16 @@ static void buddy(int x,int y,int mood,int ms,bool compact) {
     else { rect(x+25+gaze,y+(blink?32:28),5,blink?2:9,INK,3,0); rect(x+43+gaze,y+(blink?32:28),5,blink||mood==2?2:9,INK,3,0); }
     if(mood==4) { rect(x+13,y+19,23,18,body,5,2); rect(x+40,y+19,23,18,body,5,2); line(x+36,y+27,x+40,y+27,INK,2); }
     if(mood==1) { line(x+16,y+17,x+28,y+22,INK,3); line(x+46,y+22,x+59,y+17,INK,3); }
-    uint32_t cheek=setup?od_setup_theme.seal:od_themes[mood].seal;
+    uint32_t cheek=setup?od_setup_theme.seal:pet_theme.seal;
     rect(x+14,y+40,12,5,cheek,3,0); rect(x+46,y+40,12,5,cheek,3,0);
     if(mood==0 || mood==5) rect(x+31,y+41,12,mood==5?17:12,INK,7,0);
     else if(mood==1) {lv_draw_arc_dsc_t d;lv_draw_arc_dsc_init(&d);d.center=(lv_point_t){x+38,y+51};d.radius=8;d.width=2;d.start_angle=180;d.end_angle=360;d.color=lv_color_hex(INK);arc(&d);}
     else {lv_draw_arc_dsc_t d;lv_draw_arc_dsc_init(&d);d.center=(lv_point_t){x+38,y+45};d.radius=8;d.width=2;d.start_angle=0;d.end_angle=180;d.color=lv_color_hex(INK);arc(&d);}
     if(mood==5) rect(x+40,y+54,5,11,0x6dc5e7,3,0);
-    if(mood==6) { rect(x+16,y-15,40,8,od_themes[mood].seal,5,2); rect(x+22,y-13,28,3,od_themes[mood].paper,2,0); }
+    if(mood==6) { rect(x+16,y-15,40,8,od_theme_palette(s_view.settings.theme,mood).seal,5,2); rect(x+22,y-13,28,3,od_theme_palette(s_view.settings.theme,mood).paper,2,0); }
     if(mood==7) {
         const int points[][2]={{0,24},{3,6},{12,14},{18,0},{24,15},{29,7},{29,24}};
-        lv_draw_triangle_dsc_t d;lv_draw_triangle_dsc_init(&d);d.color=lv_color_hex(od_themes[mood].seal);
+        lv_draw_triangle_dsc_t d;lv_draw_triangle_dsc_init(&d);d.color=lv_color_hex(od_theme_palette(s_view.settings.theme,mood).seal);
         for(int i=1;i<6;i++){d.p[0]=(lv_point_precise_t){x+21,y+6};d.p[1]=(lv_point_precise_t){x+21+points[i][0],y-18+points[i][1]};d.p[2]=(lv_point_precise_t){x+21+points[i+1][0],y-18+points[i+1][1]};for(int j=0;j<3;j++){d.p[j].x=scaled_x(d.p[j].x);d.p[j].y=scaled_y(d.p[j].y);}lv_draw_triangle(s_layer,&d);}
     }
     if(wave) {line(x-2,y+43,x-9,y+34+(int)(sinf(ms*.025f)*5),INK,3);rect(x-13,y+28+(int)(sinf(ms*.025f)*5),9,9,body,5,1);}
@@ -213,7 +267,7 @@ static void buddy(int x,int y,int mood,int ms,bool compact) {
 }
 
 static void home(void) {
-    uint32_t bg=od_themes[s_view.mood].paper; rect(0,0,240,320,bg,0,0); status(INK,false);
+    uint32_t bg=THEME.paper; rect(0,0,240,320,bg,0,0); status(INK,false);
     char weekday[32];const char *days[]={"周日","周一","周二","周三","周四","周五","周六"};
     int day=(s_view.utc_us/1000000+28800)/86400;int wd=(day+4)%7;
     snprintf(weekday,sizeof(weekday),"%s / %s",days[wd],!s_view.connected?"离线续时":wd==0 || wd==6?"休息日":"工作日");CENTER(84,12,90,weekday,&od_font_9,INK);
@@ -223,9 +277,9 @@ static void home(void) {
     char buf[32]; snprintf(buf,sizeof(buf),"%02d:%02d:%02d",seconds/3600,seconds/60%60,seconds%60);
     TXT(17,83,210,s_view.time.phase==OD_WAIT?"--:--:--":buf,&od_digits_35,INK);
     rect(73,207,96,9,THEME.ticket,6,0); buddy(84,142,s_view.mood,s_view.animation_ms,false);
-    rect(17,148,58,25,od_themes[s_view.mood].seal,5,0);
+    rect(17,148,58,25,THEME.seal,5,0);
     const char *tag=s_mood[s_view.mood];
-    CENTER(17,154,58,tag,&od_font_10,od_themes[s_view.mood].ink);
+    CENTER(17,154,58,tag,&od_font_10,THEME.ink);
     line(182,133,182,145,THEME.accent,3); line(176,139,188,139,THEME.accent,3);
     const char *quote=s_quote[s_view.mood];
     CENTER(10,226,220,quote,&od_font_12,INK);
@@ -331,7 +385,7 @@ static void confetti(void) {
     }
 }
 static void done(void) {
-    int mood=s_view.mood;uint32_t ink=od_themes[mood].ink,mint=od_themes[mood].ticket,original_ink=INK;INK=ink;
+    int mood=s_view.mood;uint32_t ink=od_theme_palette(s_view.settings.theme,mood).ink,mint=od_theme_palette(s_view.settings.theme,mood).ticket,original_ink=INK;INK=ink;
     rect(0,0,240,320,PAPER,0,0);
     char buf[24],clock[6];clock_text(clock,(s_view.utc_us/1000000+28800)%86400/60);
     snprintf(buf,sizeof(buf),"OFF DUTY / %s",s_view.utc_us?clock:"--:--");TXT(17,12,168,buf,&od_font_10,ink);
@@ -354,7 +408,7 @@ static void done(void) {
         s_layer=stamp;rect(130,169,85,70,mint,0,0);
         for(int y=-33;y<=33;y++) {
             int width=(int)(41*sqrtf(1-y*y/(33.0f*33.0f)));
-            rect(172-width,204+y,2*width+1,1,od_themes[mood].seal,0,0);
+            rect(172-width,204+y,2*width+1,1,od_theme_palette(s_view.settings.theme,mood).seal,0,0);
         }
         for(int i=0;i<32;i++) {
             float a=i*6.2831853f/32,b=(i+1)*6.2831853f/32;
@@ -365,8 +419,8 @@ static void done(void) {
         s_layer=parent;lv_draw_image_dsc_t d;lv_draw_image_dsc_init(&d);d.src=stamp;d.rotation=3470;d.pivot=(lv_point_t){42,35};d.antialias=true;lv_draw_layer(parent,&d,&area);
     }
 #else
-    const lv_image_dsc_t *images[]={&od_stamp_0,&od_stamp_1,&od_stamp_2,&od_stamp_3,&od_stamp_4,&od_stamp_5,&od_stamp_6,&od_stamp_7};
-    lv_draw_image_dsc_t image;lv_draw_image_dsc_init(&image);image.src=images[mood];
+    const lv_image_dsc_t *images[3][8]={{&od_stamp_0,&od_stamp_1,&od_stamp_2,&od_stamp_3,&od_stamp_4,&od_stamp_5,&od_stamp_6,&od_stamp_7},{&od_stamp_t1_0,&od_stamp_t1_1,&od_stamp_t1_2,&od_stamp_t1_3,&od_stamp_t1_4,&od_stamp_t1_5,&od_stamp_t1_6,&od_stamp_t1_7},{&od_stamp_t2_0,&od_stamp_t2_1,&od_stamp_t2_2,&od_stamp_t2_3,&od_stamp_t2_4,&od_stamp_t2_5,&od_stamp_t2_6,&od_stamp_t2_7}};
+    lv_draw_image_dsc_t image;lv_draw_image_dsc_init(&image);image.src=images[s_view.settings.theme][mood];
     lv_area_t stamp_area={123,160,222,249};lv_draw_image(s_layer,&image,&stamp_area);
 #endif
     buddy(37,mood==6 || mood==7?210:204,mood,s_view.animation_ms,true);
@@ -439,7 +493,7 @@ static void resume_picker(void) {
         snprintf(label,sizeof(label),"%s %s 结束",((s_view.utc_us/1000000+28800)%86400+s_view.overtime_min*60)>=86400?"次日":"预计",end);
         CENTER(17,205,206,label,&od_font_10,INK);
     }
-    CENTER(17,238,206,s_view.notice==2?"上下班时间不能相同":s_view.notice==1?"保存失败，请重试":s_view.overtime_picker?"加班时长 · 每次调整半小时":"每次调整 1 分钟 · 同步到设置",&od_font_10,INK);
+    CENTER(17,238,206,s_view.notice==2?"上下班时间不能相同":s_view.notice==1?"保存失败，请重试":s_view.overtime_picker?"加班时长 · 每次调整半小时":"每次调整 15 分钟 · 同步到设置",&od_font_10,INK);
     rect(17,269,206,25,THEME.ticket,8,0);
     CENTER(17,275,206,s_view.overtime_picker?"OK 开始本次加班":"OK 保存并上班",&od_font_11,INK);
     CENTER(17,306,206,"↑ ↓ 调整 / 长按 OK 取消",&od_font_9,INK);
@@ -462,9 +516,9 @@ static void relax(void) {
     if(mode==5) rect(60,214,120,28,THEME.ticket,12,2);
     int motion_t=mode==0 && t>2800?2800:mode==2 && t>2750?2750:t;
     float wave=(1.f-cosf((motion_t%(mode==2?550:mode==3?600:1400))*6.2831853f/(mode==2?550:mode==3?600:1400)))/2;
-    const lv_image_dsc_t *normal[]={&od_pet_0,&od_pet_1,&od_pet_2,&od_pet_3,&od_pet_4,&od_pet_5,&od_pet_6,&od_pet_7};
-    const lv_image_dsc_t *resting[]={&od_pet_rest_0,&od_pet_rest_1,&od_pet_rest_2,&od_pet_rest_3,&od_pet_rest_4,&od_pet_rest_5,&od_pet_rest_6,&od_pet_rest_7};
-    lv_draw_image_dsc_t image;lv_draw_image_dsc_init(&image);image.src=(mode==1 || mode==5?resting:normal)[s_view.mood];image.pivot=(lv_point_t){36,53};image.antialias=true;
+    const lv_image_dsc_t *normal[3][8]={{&od_pet_0,&od_pet_1,&od_pet_2,&od_pet_3,&od_pet_4,&od_pet_5,&od_pet_6,&od_pet_7},{&od_pet_t1_0,&od_pet_t1_1,&od_pet_t1_2,&od_pet_t1_3,&od_pet_t1_4,&od_pet_t1_5,&od_pet_t1_6,&od_pet_t1_7},{&od_pet_t2_0,&od_pet_t2_1,&od_pet_t2_2,&od_pet_t2_3,&od_pet_t2_4,&od_pet_t2_5,&od_pet_t2_6,&od_pet_t2_7}};
+    const lv_image_dsc_t *resting[3][8]={{&od_pet_rest_0,&od_pet_rest_1,&od_pet_rest_2,&od_pet_rest_3,&od_pet_rest_4,&od_pet_rest_5,&od_pet_rest_6,&od_pet_rest_7},{&od_pet_rest_t1_0,&od_pet_rest_t1_1,&od_pet_rest_t1_2,&od_pet_rest_t1_3,&od_pet_rest_t1_4,&od_pet_rest_t1_5,&od_pet_rest_t1_6,&od_pet_rest_t1_7},{&od_pet_rest_t2_0,&od_pet_rest_t2_1,&od_pet_rest_t2_2,&od_pet_rest_t2_3,&od_pet_rest_t2_4,&od_pet_rest_t2_5,&od_pet_rest_t2_6,&od_pet_rest_t2_7}};
+    lv_draw_image_dsc_t image;lv_draw_image_dsc_init(&image);image.src=(mode==1 || mode==5?resting:normal)[s_view.settings.theme][s_view.mood];const uint8_t *crop=od_pet_crop[s_view.settings.theme][mode==1 || mode==5][s_view.mood];image.pivot=(lv_point_t){36-crop[0],53-crop[1]};image.antialias=true;
     int dy=0,angle=0;
     if(mode==0) {dy=-(int)(7*wave);image.scale_x=(int)(256*(1-.06f*wave));image.scale_y=(int)(256*(1+.13f*wave));}
     if(mode==1) {
@@ -476,7 +530,7 @@ static void relax(void) {
     if(mode==3) {dy=-10+(int)(5*wave);image.scale_x=(int)(256*(1+.03f*wave));image.scale_y=(int)(256*(1-.06f*wave));}
     if(mode==4) {float breath=sinf(t*3.14159265f/3000);dy=-(int)(8*breath);image.scale_x=image.scale_y=(int)(256*(1+.04f*breath));}
     if(mode==5) {float settle=t<600?t/600.f:t>2550?(3000-t)/450.f:1;angle=(int)(-12*settle);dy=(int)(3*settle)-3;image.scale_x=image.scale_y=(int)(256*(1+.025f*sinf(t*3.14159265f/3000)*settle));}
-    image.rotation=(angle*10+3600)%3600;lv_area_t target={84,139+dy,156,230+dy};lv_draw_image(s_layer,&image,&target);
+    image.rotation=(angle*10+3600)%3600;lv_area_t target={84+crop[0],139+dy+crop[1],156,230+dy};lv_draw_image(s_layer,&image,&target);
     if(mode==0) {line(69,184-(int)(20*wave),69,203-(int)(20*wave),INK,4);line(170,184-(int)(20*wave),170,203-(int)(20*wave),INK,4);}
     if(mode==2) {int dy=(int)(8*sinf(t*3.14159265f/1000));TXT(49,151-dy,28,"♪",&od_font_24,THEME.accent);TXT(160,151-dy,30,"♫",&od_font_24,THEME.accent);}
     if(mode==3) {rect(96,210,49,31,THEME.seal,16,2);rect(103,202,35,13,PAPER,7,2);}
@@ -541,12 +595,13 @@ static void menu(void) {
         case 7:strcpy(value,s_view.connected?"已连接":"配网");break;
         case 8:strcpy(value,s_view.connected?"同步":"离线");break;
         case 9:strcpy(value,s_view.synced?(s_view.phone_time?"手机校准":s_view.connected?"网络校准":"离线续时"):"等待校准");break;
-        case 10:strcpy(value,s_view.edit?"确认删除？":"需确认");break;
+        case 11:strcpy(value,od_theme_name(s_view.settings.theme));break;
+        case 10:strcpy(value,s_view.selected==10 && s_view.edit?"确认删除？":"需确认");break;
         default:break;
         }
         text(126,y+7,92,value,&od_font_12,INK,LV_TEXT_ALIGN_RIGHT);
     }
-    CENTER(8,278,224,s_view.notice==1?"保存失败，请重试":s_view.notice==2?"上下班时间不能相同":s_view.notice==3?"网络启动失败，请重启":s_view.edit?"↑↓ 调整 · OK 保存":"↑↓ 选择 · OK 编辑",&od_font_11,INK);
+    CENTER(8,278,224,s_view.notice==1?"保存失败，请重试":s_view.notice==2?"上下班时间不能相同":s_view.notice==3?"网络启动失败，请重启":s_view.edit?(s_view.selected==10?"OK 确认忘记 / ↑↓ 取消":"↑↓ 调整 · OK 保存"):"↑↓ 选择 · OK 编辑",&od_font_11,INK);
     CENTER(8,303,224,"长按 OK 返回",&od_font_11,INK);
 }
 
@@ -573,10 +628,11 @@ static void welcome(void) {
 static void draw(lv_event_t *e) {
     s_layer=lv_event_get_layer(e);
     bool setup=!s_view.menu && od_setup_state(s_view.connected,s_view.synced,s_view.plan_ready)!=OD_READY;
-    s_theme=setup?&od_setup_theme:&od_themes[s_view.menu==2?0:s_view.mood];
+    s_palette=od_theme_palette(s_view.settings.theme,s_view.menu==2?0:s_view.mood);
+    s_theme=setup?&od_setup_theme:&s_palette;
     INK=THEME.ink;
 #ifdef OD_PET_REFERENCE
-    s_theme=&od_themes[s_view.mood];INK=THEME.ink;
+    s_palette=od_theme_palette(s_view.settings.theme,s_view.mood);s_theme=&s_palette;INK=THEME.ink;
     s_relax_mode=s_view.relax;buddy(84,157,s_view.mood,0,false);s_relax_mode=-1;return;
 #endif
     if(s_view.boot) {INK=0x293534;boot();}
@@ -611,14 +667,14 @@ static bool waiting_visible(const od_view_t *v) {
 }
 static int waiting_breathe(int ms) {return (int)lroundf(1-cosf(ms*2*3.14159265f/2500));}
 void od_ui_update(lv_obj_t *screen,const od_view_t *view) {
-    bool same_wait=waiting_visible(&s_view) && waiting_visible(view) && s_view.mood==view->mood && s_view.battery==view->battery && s_view.utc_us/60000000==view->utc_us/60000000 && s_view.time.start_utc==view->time.start_utc && s_view.settings.start_min==view->settings.start_min && s_view.settings.wait_min==view->settings.wait_min;
+    bool same_wait=waiting_visible(&s_view) && waiting_visible(view) && s_view.settings.theme==view->settings.theme && s_view.mood==view->mood && s_view.battery==view->battery && s_view.utc_us/60000000==view->utc_us/60000000 && s_view.time.start_utc==view->time.start_utc && s_view.settings.start_min==view->settings.start_min && s_view.settings.wait_min==view->settings.wait_min;
     bool wait_pet_changed=waiting_breathe(s_view.animation_ms)!=waiting_breathe(view->animation_ms);
     bool wait_clock_changed=(s_view.time.remaining_us+999999)/1000000!=(view->time.remaining_us+999999)/1000000;
     bool wait_progress_changed=od_wait_percent(s_view.time.remaining_us,s_view.settings.start_min,s_view.settings.wait_min)!=od_wait_percent(view->time.remaining_us,view->settings.start_min,view->settings.wait_min);
-    bool same_stamp=stamp_visible(&s_view) && stamp_visible(view) && s_view.feedback==view->feedback && s_view.overtime==view->overtime && !s_view.work_choice && !view->work_choice && s_view.mood==view->mood && s_view.battery==view->battery && s_view.utc_us/60000000==view->utc_us/60000000;
+    bool same_stamp=stamp_visible(&s_view) && stamp_visible(view) && s_view.feedback==view->feedback && s_view.overtime==view->overtime && !s_view.work_choice && !view->work_choice && s_view.settings.theme==view->settings.theme && s_view.mood==view->mood && s_view.battery==view->battery && s_view.utc_us/60000000==view->utc_us/60000000;
     int old_confetti_ms=s_view.confetti_ms;
     uint32_t old_confetti_seed=s_view.confetti_seed;
-    bool same_effect=!s_view.boot && !view->boot && !s_view.menu && !view->menu && !s_view.resume_picker && !view->resume_picker && s_view.feedback==view->feedback && s_view.overtime==view->overtime && !s_view.work_choice && !view->work_choice && s_view.mood==view->mood && s_view.battery==view->battery && s_view.utc_us/60000000==view->utc_us/60000000 && s_view.effect_ms<=view->effect_ms && od_setup_state(view->connected,view->synced,view->plan_ready)==OD_READY && ((s_view.off_home && view->off_home && s_view.relax>=0 && s_view.relax==view->relax) || (!s_view.off_home && !view->off_home && s_view.time.phase==OD_WORK && view->time.phase==OD_WORK && s_view.egg>=0 && s_view.egg==view->egg));
+    bool same_effect=!s_view.boot && !view->boot && !s_view.menu && !view->menu && !s_view.resume_picker && !view->resume_picker && s_view.feedback==view->feedback && s_view.overtime==view->overtime && !s_view.work_choice && !view->work_choice && s_view.settings.theme==view->settings.theme && s_view.mood==view->mood && s_view.battery==view->battery && s_view.utc_us/60000000==view->utc_us/60000000 && s_view.effect_ms<=view->effect_ms && od_setup_state(view->connected,view->synced,view->plan_ready)==OD_READY && ((s_view.off_home && view->off_home && s_view.relax>=0 && s_view.relax==view->relax) || (!s_view.off_home && !view->off_home && s_view.time.phase==OD_WORK && view->time.phase==OD_WORK && s_view.egg>=0 && s_view.egg==view->egg));
     s_view=*view;
     if(same_stamp) {
         if(s_view.feedback){lv_area_t feedback_area={8,274,231,319};lv_obj_invalidate_area(screen,&feedback_area);}

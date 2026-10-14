@@ -29,7 +29,7 @@ def save(font,name,characters):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--cjk',required=True);parser.add_argument('--anton',required=True);parser.add_argument('--mono',required=True)
     args=parser.parse_args();OUT.mkdir(parents=True,exist_ok=True)
-    chars=''.join(sorted(set(re.findall(r'[^\x00-\x7f]',(ROOT/'main/offduty_ui.c').read_text()))))+''.join(map(chr,range(32,127)))
+    chars=''.join(sorted(set(re.findall(r'[^\x00-\x7f]',(ROOT/'main/offduty_ui.c').read_text()+''.join(re.findall(r'"([^"]+)"',(ROOT/'main/offduty_theme.h').read_text()))))))+''.join(map(chr,range(32,127)))
     cjk=TTFont(args.cjk);missing=set(map(ord,chars))-set(cjk.getBestCmap());assert not missing,missing
     save(cjk,'OffDutySans',chars)
     anton=TTFont(args.anton)

@@ -1,6 +1,9 @@
 #ifndef LV_CONF_H
 #define LV_CONF_H
 #define LV_COLOR_DEPTH 16
+#define LV_USE_LZ4 1
+#define LV_USE_LZ4_INTERNAL 1
+#define LV_BIN_DECODER_RAM_LOAD 1
 #define LV_MEM_SIZE (48*1024)
 #define LV_USE_OS 0
 #define LV_DEF_REFR_PERIOD 20

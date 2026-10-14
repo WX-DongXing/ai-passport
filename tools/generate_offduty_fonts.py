@@ -16,7 +16,7 @@ def main():
     parser.add_argument("--mono", required=True)
     args = parser.parse_args()
     source = (ROOT / "main/offduty_ui.c").read_text()
-    symbols = "".join(sorted(set(re.findall(r"[^\x00-\x7f]", source))))
+    symbols = "".join(sorted(set(re.findall(r"[^\x00-\x7f]", source + "".join(re.findall(r'"([^"]+)"', (ROOT / "main/offduty_theme.h").read_text()))))))
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "characters.txt").write_text(symbols + "\n")
     for size in (9, 10, 11, 12, 14, 21, 23, 24, 29, 44, 35, 45, 128, 148):

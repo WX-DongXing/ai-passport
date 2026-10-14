@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 void od_settings_default(od_settings_t *s) {
-    *s = (od_settings_t){540, 1080, 1200, 300, 75, 50, 0, 1, 480};
+    *s = (od_settings_t){540, 1080, 1200, 300, 75, 50, 0, 1, 480, 0};
 }
 void od_wait_link(od_settings_t *s) {
     int rest=(s->start_min+1440-s->end_min)%1440;
@@ -18,7 +18,7 @@ int od_wait_percent(int64_t remaining_us,int start_min,int wait_min) {
 }
 int od_wait_step(const od_settings_t *s,int direction) {
     int candidate=s->wait_min;
-    for(int i=0;i<1440;i++) {
+    for(int i=0;i<1440/OD_TIME_STEP_MIN;i++) {
         candidate=od_shift_step(candidate,direction);
         int after_end=(candidate+1440-s->end_min)%1440,rest=(s->start_min+1440-s->end_min)%1440;
         if(after_end<rest)return candidate;
@@ -36,11 +36,11 @@ bool od_settings_valid(const od_settings_t *s) {
         (s->wait_min+1440-s->end_min)%1440 < (s->start_min+1440-s->end_min)%1440 &&
         s->sleep_min < 1440 && s->idle_sec >= 30 && s->idle_sec <= 3600 &&
         s->brightness >= 10 && s->brightness <= 100 && s->volume <= 100 &&
-        s->sleep_mode <= 2 && s->random_eggs <= 1;
+        s->sleep_mode <= 2 && s->random_eggs <= 1 && s->theme < OD_THEME_COUNT;
 }
 
 bool od_settings_blob(const void *blob,size_t size,od_settings_t *settings) {
-    if(!blob || (size!=sizeof(*settings) && size!=offsetof(od_settings_t,wait_min)))return false;
+    if(!blob || (size!=sizeof(*settings) && size!=offsetof(od_settings_t,wait_min) && size!=offsetof(od_settings_t,theme)))return false;
     od_settings_t value;od_settings_default(&value);memcpy(&value,blob,size);
     od_settings_t linked=value;od_wait_link(&linked);
     if(value.wait_min>=1440 || !od_settings_valid(&linked))return false;
@@ -70,7 +70,7 @@ void od_sleep_migrate(od_settings_t *s) {
 }
 
 int od_shift_step(int minute,int direction) {
-    int next=minute+(direction>0?1:-1);
+    int next=direction>0?(minute/OD_TIME_STEP_MIN+1)*OD_TIME_STEP_MIN:((minute+OD_TIME_STEP_MIN-1)/OD_TIME_STEP_MIN-1)*OD_TIME_STEP_MIN;
     return (next+1440)%1440;
 }
 
@@ -163,14 +163,14 @@ static bool decode(const char *p, size_t len, char *out, size_t cap) {
 }
 
 bool od_settings_form(const char *body,od_settings_t *settings,char token[33]) {
-    const char *names[]={"start","end","brightness","volume","screen_off","eggs","token","wait"};
-    unsigned seen=0;unsigned values[8]={0};token[0]=0;
+    const char *names[]={"start","end","brightness","volume","screen_off","eggs","token","wait","theme"};
+    unsigned seen=0;unsigned values[9]={0};token[0]=0;
     if(!body || strlen(body)>512) return false;
     for(const char *p=body;*p;) {
         const char *end=strchr(p,'&');if(!end)end=p+strlen(p);
         const char *eq=memchr(p,'=',end-p);if(!eq)return false;
-        unsigned field=0;for(;field<8;field++)if(strlen(names[field])==(size_t)(eq-p) && !memcmp(names[field],p,eq-p))break;
-        char value[33];if(field==8 || (seen&(1u<<field)) || !decode(eq+1,end-eq-1,value,sizeof(value)))return false;
+        unsigned field=0;for(;field<9;field++)if(strlen(names[field])==(size_t)(eq-p) && !memcmp(names[field],p,eq-p))break;
+        char value[33];if(field==9 || (seen&(1u<<field)) || !decode(eq+1,end-eq-1,value,sizeof(value)))return false;
         seen|=1u<<field;
         if(field==6) {if(strlen(value)!=32)return false;strcpy(token,value);}
         else if(field==0 || field==1 || field==7) {
@@ -184,11 +184,12 @@ bool od_settings_form(const char *body,od_settings_t *settings,char token[33]) {
         }
         p=*end?end+1:end;
     }
-    if(seen!=255 || values[2]<10 || values[2]>100 || values[3]>100 || values[5]>1)return false;
+    if(values[0]%OD_TIME_STEP_MIN || values[1]%OD_TIME_STEP_MIN || values[7]%OD_TIME_STEP_MIN)return false;
+    if((seen!=255 && seen!=511) || values[8]>=OD_THEME_COUNT || values[2]<10 || values[2]>100 || values[3]>100 || values[5]>1)return false;
     int choice=0;for(;choice<6;choice++)if(values[4]==sleep_seconds[choice])break;
     if(choice==6)return false;
     od_settings_t candidate;od_settings_default(&candidate);
-    candidate.wait_min=values[7];candidate.start_min=values[0];candidate.end_min=values[1];candidate.brightness=values[2];candidate.volume=values[3];candidate.random_eggs=values[5];
+    candidate.theme=values[8];candidate.wait_min=values[7];candidate.start_min=values[0];candidate.end_min=values[1];candidate.brightness=values[2];candidate.volume=values[3];candidate.random_eggs=values[5];
     od_sleep_set(&candidate,choice);
     if(!od_settings_valid(&candidate))return false;
     *settings=candidate;return true;

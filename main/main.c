@@ -95,6 +95,7 @@ static void adjust(int delta) {
     if(row==3) {int v=s->brightness+delta*5; s->brightness=v<10?10:v>100?100:v;}
     if(row==4) {int v=s->volume+delta*5; s->volume=v<0?0:v>100?100:v; play(0);}
     if(row==5) od_sleep_set(s,(od_sleep_choice(s)+6+delta)%6);
+    if(row==11)s->theme=(s->theme+OD_THEME_COUNT+delta)%OD_THEME_COUNT;
     if(row==6) s->random_eggs=!s->random_eggs;
     if(row==2)s->wait_min=od_wait_step(s,delta);
     if(row<2)od_wait_link(s);
@@ -194,16 +195,16 @@ static void input(const input_event_t *in,int64_t now) {
     if(s_view.menu==2) {if(in->btn==BSP_BTN_OK) {od_net_action(OD_NET_CLOSE);s_view.menu=1;} return;}
     if(s_view.menu) {
         if(in->btn!=BSP_BTN_OK) {
-            if(s_view.edit && s_view.selected<7) adjust(in->btn==BSP_BTN_UP?1:-1);
+            if(s_view.edit && (s_view.selected<7 || s_view.selected==11)) adjust(in->btn==BSP_BTN_UP?1:-1);
             else if(!s_view.edit) s_view.selected=(s_view.selected+OD_MENU_ROWS+(in->btn==BSP_BTN_UP?-1:1))%OD_MENU_ROWS;
             else s_view.edit=0;
-        } else if(s_view.selected<7) { if(s_view.edit) save(); else s_view.edit=1; }
+        } else if(s_view.selected<7 || s_view.selected==11) { if(s_view.edit) save(); else s_view.edit=1; }
         else if(s_view.selected==7) { if(od_net_action(OD_NET_SETUP)) {s_portal_seen=false;s_view.selected=0;s_view.menu=2;} else s_view.notice=3; }
         else if(s_view.selected==8) {if(!od_net_action(OD_NET_SYNC)) s_view.notice=3;}
         else if(s_view.selected==10) {
             if(!s_view.edit) s_view.edit=1;
             else {if(!od_net_action(OD_NET_FORGET)) s_view.notice=3; s_view.edit=0;}
-        } else if(s_view.selected==11) close_menu();
+        } else if(s_view.selected==12) close_menu();
     } else if(in->btn==BSP_BTN_OK) {s_view.menu=1; s_view.egg=-1;}
     else if(in->btn==BSP_BTN_UP) {s_view.mood=(s_view.mood+1)%8; play(0);}
     else if(s_view.time.phase==OD_WORK) {

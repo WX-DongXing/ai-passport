@@ -170,7 +170,7 @@ static esp_err_t submit_settings(httpd_req_t *req) {
     body[read]=0;
     if(!od_settings_form(body,&settings,token) || strcmp(token,s_token)) {
         httpd_resp_set_status(req,"400 Bad Request");
-        return notice(req,"保存未提交：请检查时间和数值范围；若页面已过期，请返回设置重新提交。",false);
+        return notice(req,"保存未提交：请检查时间（15 分钟刻度）和数值范围；若页面已过期，请返回设置重新提交。",false);
     }
     portENTER_CRITICAL(&s_mux);
     bool busy=s_settings_pending;if(!busy){s_pending_settings=settings;s_settings_pending=true;s_settings_saved=false;s_save_result=OD_PHONE_SAVING;}

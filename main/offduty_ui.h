@@ -26,4 +26,4 @@ typedef struct {
 lv_obj_t *od_ui_create(void);
 void od_ui_update(lv_obj_t *screen, const od_view_t *view);
 const char *od_menu_name(int row);
-#define OD_MENU_ROWS 12
+#define OD_MENU_ROWS 13

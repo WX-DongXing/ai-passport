@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static char phone_html[24000];
+static char phone_html[48000];
 static bool capture_phone(void *ctx,const char *html) {
     (void)ctx;
     assert(strlen(phone_html)+strlen(html)<sizeof(phone_html));
@@ -42,12 +42,13 @@ int main(void) {
     assert(!strstr(phone_html,"value=\"Coffee & <"));
     assert(!strstr(phone_html,"信号强") && !strstr(phone_html,"信号中") && !strstr(phone_html,"信号弱"));
     assert(strstr(phone_html,"action=/time") && strstr(phone_html,"Date.now()") && strstr(phone_html,"id=phone-clock-button disabled"));
-    assert(strstr(phone_html,"name=start type=time step=60") && strstr(phone_html,"name=end type=time step=60") && strstr(phone_html,"name=wait type=time step=60"));
+    assert(strstr(phone_html,"select name=start required") && strstr(phone_html,"select name=end required") && strstr(phone_html,"select name=wait required"));
     assert(!strstr(phone_html,"半小时") && strstr(phone_html,"默认提前 1 小时"));
     assert(!strstr(phone_html,"密码可显示或隐藏") && !strstr(phone_html,"不回显"));
     assert(strstr(phone_html,"class=signature>OFF DUTY CLUB"));
     assert(strstr(phone_html,"action=/scan") && strstr(phone_html,"action=/settings"));
     assert(strstr(phone_html,"data-password=wifi-password") && strstr(phone_html,"data-password=hidden-password"));
+    assert(strstr(phone_html,"name=theme") && strstr(phone_html,"奶油晴日") && strstr(phone_html,"海盐晴空") && strstr(phone_html,"莓果汽水"));
     assert(strstr(phone_html,"name=eggs") && strstr(phone_html,"name=screen_off") && !strstr(phone_html,"name=idle"));
     assert(strstr(phone_html,"确认忘记网络并关闭热点</button></form></details></section>"));
     assert(strstr(phone_html,"</main></body></html>"));
@@ -143,9 +144,9 @@ int main(void) {
     assert(od_settings_blob(&night,sizeof(night),&migrated) && migrated.wait_min==1260);
     od_wait_link(&night);assert(night.wait_min==1260 && od_settings_valid(&night));
     night.wait_min=1380;assert(!od_settings_valid(&night));
-    assert(od_shift_step(540,1)==541 && od_shift_step(540,-1)==539);
-    assert(od_shift_step(557,1)==558 && od_shift_step(557,-1)==556);
-    assert(od_shift_step(1439,1)==0 && od_shift_step(0,-1)==1439);
+    assert(od_shift_step(540,1)==555 && od_shift_step(540,-1)==525);
+    assert(od_shift_step(557,1)==570 && od_shift_step(557,-1)==555);
+    assert(od_shift_step(1439,1)==0 && od_shift_step(0,-1)==1425);
     char settings_token[33];od_settings_t remote;
     bool forget;
     assert(od_control_form("action=sync&token=0123456789abcdef0123456789abcdef",&forget,"0123456789abcdef0123456789abcdef") && !forget);
@@ -153,6 +154,12 @@ int main(void) {
     assert(!od_control_form("action=forget&token=0123456789abcdef0123456789abcdee",&forget,"0123456789abcdef0123456789abcdef"));
     assert(!od_control_form("action=sync&token=0123456789abcdef0123456789abcdef&action=forget",&forget,"0123456789abcdef0123456789abcdef"));
     const char *form="start=09%3A00&end=18%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=08%3A00&token=0123456789abcdef0123456789abcdef";
+    od_settings_t themed=s;themed.theme=2;
+    assert(od_settings_blob(&themed,sizeof(themed),&remote) && remote.theme==2);
+    assert(od_settings_blob(&themed,offsetof(od_settings_t,theme),&remote) && remote.theme==0 && remote.start_min==themed.start_min);
+    themed.theme=3;assert(!od_settings_valid(&themed));
+    assert(od_settings_form("start=09%3A00&end=18%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=08%3A00&theme=2&token=0123456789abcdef0123456789abcdef",&remote,settings_token) && remote.theme==2);
+    assert(!od_settings_form("start=09%3A00&end=18%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=08%3A00&theme=3&token=0123456789abcdef0123456789abcdef",&remote,settings_token));
     assert(od_settings_form(form,&remote,settings_token) && !memcmp(&s,&remote,sizeof(s)));
     assert(!od_settings_form("start=09%3A00&end=18%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=09%3A00&token=0123456789abcdef0123456789abcdef",&remote,settings_token));
     assert(!od_settings_form("start=22%3A00&end=06%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=23%3A00&token=0123456789abcdef0123456789abcdef",&remote,settings_token));
@@ -160,8 +167,17 @@ int main(void) {
     assert(!od_settings_form("start=24%3A00&end=18%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=08%3A00&token=0123456789abcdef0123456789abcdef",&remote,settings_token));
     assert(!od_settings_form("start=09%3A00&end=18%3A00&brightness=256&volume=35&screen_off=0&eggs=1&wait=08%3A00&token=0123456789abcdef0123456789abcdef",&remote,settings_token));
     assert(!od_settings_form("start=09%3A00&start=10%3A00",&remote,settings_token));
-    assert(od_settings_form("start=09%3A01&end=18%3A07&brightness=75&volume=50&screen_off=0&eggs=1&wait=08%3A06&token=0123456789abcdef0123456789abcdef",&remote,settings_token));
-    assert(remote.start_min==541 && remote.end_min==1087 && remote.wait_min==486);
+    assert(!od_settings_form("start=09%3A01&end=18%3A07&brightness=75&volume=50&screen_off=0&eggs=1&wait=08%3A06&token=0123456789abcdef0123456789abcdef",&remote,settings_token));
+    assert(od_settings_form("start=09%3A15&end=18%3A45&brightness=75&volume=50&screen_off=0&eggs=1&wait=08%3A15&token=0123456789abcdef0123456789abcdef",&remote,settings_token));
+    assert(remote.start_min==555 && remote.end_min==1125 && remote.wait_min==495);
+    for(int minute=0;minute<1440;minute++) {
+        int up=od_shift_step(minute,1),down=od_shift_step(minute,-1);
+        assert(up>=0 && up<1440 && down>=0 && down<1440 && up%15==0 && down%15==0);
+        assert((up+1440-minute)%1440>=1 && (up+1440-minute)%1440<=15);
+        assert((minute+1440-down)%1440>=1 && (minute+1440-down)%1440<=15);
+    }
+    od_settings_t legacy=s;legacy.start_min=541;legacy.end_min=1087;od_wait_link(&legacy);
+    assert(od_settings_blob(&legacy,sizeof(legacy),&remote) && remote.start_min==541 && remote.end_min==1087);
     od_settings_t existing=s;existing.brightness=80;existing.volume=35;
     assert(od_settings_blob(&existing,sizeof(existing),&remote) && remote.brightness==80 && remote.volume==35);
     assert(od_overtime_step(30,-1)==30 && od_overtime_step(30,1)==60);

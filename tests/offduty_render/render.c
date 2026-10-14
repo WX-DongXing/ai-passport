@@ -46,8 +46,8 @@ static void render(lv_obj_t *scr,od_view_t *view,const char *name) {
         assert(bottom>=top && abs(top+bottom-(2*y+33))<=2);
     }
 }
-static void check_relax_center(int mood) {
-    uint16_t color=lv_color_to_u16(lv_color_hex(od_themes[mood].pet));int left=240,right=-1;
+static void check_relax_center(int theme,int mood) {
+    uint16_t color=lv_color_to_u16(lv_color_hex(od_theme_palette(theme,mood).pet));int left=240,right=-1;
     for(int y=112;y<250;y++)for(int x=0;x<240;x++)if(pixels[y*240+x]==color) {
         if(x<left)left=x;if(x>right)right=x;
     }
@@ -62,8 +62,8 @@ static double luminance(uint32_t rgb) {
     return channel[0]*0.2126+channel[1]*0.7152+channel[2]*0.0722;
 }
 static void check_theme_contrast(void) {
-    for(int mood=0;mood<8;mood++) {
-        const od_theme_t *theme=&od_themes[mood];
+    for(int variant=0;variant<3;variant++)for(int mood=0;mood<8;mood++) {
+        od_theme_t value=od_theme_palette(variant,mood);const od_theme_t *theme=&value;
         const uint32_t backgrounds[]={theme->paper,theme->ticket,theme->seal};
         for(unsigned i=0;i<sizeof(backgrounds)/sizeof(backgrounds[0]);i++)
             assert((luminance(backgrounds[i])+0.05)/(luminance(theme->ink)+0.05)>=4.5);
@@ -101,9 +101,27 @@ int main(int argc,char **argv) {
     const int boot_frames[]={0,900,1500,2200,2999};
     for(unsigned i=0;i<sizeof(boot_frames)/sizeof(boot_frames[0]);i++){v.boot_ms=boot_frames[i];snprintf(name,sizeof(name),"boot-%d",v.boot_ms);render(scr,&v,name);}
     assert(pixels[50*240+5]==lv_color_to_u16(lv_color_hex(0xf7f3e8)));
+    static uint16_t original_boot[240*320];memcpy(original_boot,pixels,sizeof(pixels));
+    for(int variant=1;variant<3;variant++){v.settings.theme=variant;render(scr,&v,"boot-theme-check");assert(!memcmp(original_boot,pixels,sizeof(pixels)));}
+    v.settings.theme=0;
     v.boot=false;render(scr,&v,"boot-to-work");
     v.connected=false;v.synced=false;v.plan_ready=false;render(scr,&v,"welcome-wifi");
     v.connected=true;render(scr,&v,"welcome-time");assert(pixels[50*240+5]==lv_color_to_u16(lv_color_hex(0xd5c8f3)));v.synced=true;render(scr,&v,"welcome-plan");v.plan_ready=true;
+    v.connected=true;v.synced=false;v.plan_ready=false;render(scr,&v,"calibration-original");
+    static uint16_t original_setup[240*320];memcpy(original_setup,pixels,sizeof(pixels));
+    for(int variant=1;variant<3;variant++){v.settings.theme=variant;render(scr,&v,"calibration-theme-check");assert(!memcmp(original_setup,pixels,sizeof(pixels)));}
+    v.settings.theme=0;v.synced=true;v.plan_ready=true;
+    for(int variant=0;variant<3;variant++)for(int mood=0;mood<8;mood++){
+        v.settings.theme=variant;v.mood=mood;v.time=od_time_at(v.utc_us,&v.settings);v.time.phase=OD_WORK;snprintf(name,sizeof(name),"theme-%d-%d-work",variant,mood);render(scr,&v,name);
+        v.time.phase=OD_DONE;snprintf(name,sizeof(name),"theme-%d-%d-done",variant,mood);render(scr,&v,name);
+        for(int mode=0;mode<6;mode++){v.off_home=true;v.relax=mode;v.effect_ms=1200;snprintf(name,sizeof(name),"theme-%d-%d-relax-%d",variant,mood,mode);render(scr,&v,name);check_relax_center(variant,mood);}
+        v.relax=-1;snprintf(name,sizeof(name),"theme-%d-%d-off-home",variant,mood);render(scr,&v,name);v.off_home=false;
+        v.time.phase=OD_BEFORE;v.time.remaining_us=INT64_C(1080000000);snprintf(name,sizeof(name),"theme-%d-%d-waiting",variant,mood);render(scr,&v,name);
+        v.time.phase=OD_FINAL;v.time.remaining_us=INT64_C(5000000);snprintf(name,sizeof(name),"theme-%d-%d-final",variant,mood);render(scr,&v,name);
+        v.time.phase=OD_WORK;for(int e=0;e<5;e++){v.egg=e;snprintf(name,sizeof(name),"theme-%d-%d-egg-%d",variant,mood,e);render(scr,&v,name);}v.egg=-1;
+        v.menu=1;v.selected=11;snprintf(name,sizeof(name),"theme-%d-%d-menu",variant,mood);render(scr,&v,name);v.menu=0;
+    }
+    v.settings.theme=0;v.time=od_time_at(v.utc_us,&v.settings);
     v.mood=3;v.animation_ms=100;render(scr,&v,"pet-awake");
     uint16_t awake[240*320];memcpy(awake,pixels,sizeof(awake));v.animation_ms=4350;render(scr,&v,"pet-blink");assert(memcmp(awake,pixels,sizeof(awake))!=0);
     v.animation_ms=9500;render(scr,&v,"pet-wave");assert(memcmp(awake,pixels,sizeof(awake))!=0);v.animation_ms=1200;
@@ -129,11 +147,11 @@ int main(int argc,char **argv) {
     puts("Break illustration centering and animation clearance: PASS");v.egg=-1;
     v.off_home=true;
     for(int mood=0;mood<8;mood++)for(int effect=0;effect<6;effect++) {
-        v.mood=mood;v.relax=effect;v.effect_ms=0;od_ui_update(scr,&v);lv_refr_now(NULL);check_relax_center(mood);
+        v.mood=mood;v.relax=effect;v.effect_ms=0;od_ui_update(scr,&v);lv_refr_now(NULL);check_relax_center(0,mood);
         uint16_t first[240*320];memcpy(first,pixels,sizeof(first));
         for(int age=200;age<3000;age+=200) {
             v.effect_ms=age;flushed_pixels=0;od_ui_update(scr,&v);lv_refr_now(NULL);
-            assert(flushed_pixels<=57600);check_relax_center(mood);
+            assert(flushed_pixels<=57600);check_relax_center(0,mood);
             uint16_t partial[240*320];memcpy(partial,pixels,sizeof(partial));lv_obj_invalidate(scr);lv_refr_now(NULL);
             if(memcmp(partial,pixels,sizeof(partial))) {
                 int x1=240,y1=320,x2=0,y2=0;
@@ -147,6 +165,11 @@ int main(int argc,char **argv) {
         v.effect_ms=1500;snprintf(name,sizeof(name),"relax-%d-%d",mood,effect);render(scr,&v,name);
     }
     v.relax=-1;v.off_home=false;
+    v.menu=1;v.selected=11;v.edit=false;render(scr,&v,"theme-menu-read");
+    static uint16_t forget_row[92*18];for(int y=0;y<18;y++)memcpy(forget_row+y*92,pixels+(85+y)*240+126,92*sizeof(uint16_t));
+    v.edit=true;render(scr,&v,"theme-menu-edit");
+    for(int y=0;y<18;y++)assert(!memcmp(forget_row+y*92,pixels+(85+y)*240+126,92*sizeof(uint16_t)));
+    v.edit=false;v.menu=0;
     for(int i=0;i<OD_MENU_ROWS;i++){v.menu=1;v.selected=i;snprintf(name,sizeof(name),"setting-%d",i);render(scr,&v,name);}v.menu=0;
     v.menu=2;v.portal=true;strcpy(v.ap_name,"OFFDUTY-DEMO");strcpy(v.ap_password,"0123456789abcdef");
     v.phone_connected=false;render(scr,&v,"wifi-qr");
@@ -211,7 +234,7 @@ int main(int argc,char **argv) {
     for(int mood=0;mood<8;mood++)for(int frame=0;frame<5;frame++) {
         v.mood=mood;v.animation_ms=frame*500;snprintf(name,sizeof(name),"waiting-charge-%d-%d",mood,frame);render(scr,&v,name);
         if(frame>0)assert(flushed_pixels<=28800);
-        uint16_t background=lv_color_to_u16(lv_color_hex(od_themes[mood].paper)),band=lv_color_to_u16(lv_color_hex(od_themes[mood].ticket)),pet=lv_color_to_u16(lv_color_hex(od_themes[mood].pet));
+        uint16_t background=lv_color_to_u16(lv_color_hex(od_themes[mood].paper)),band=lv_color_to_u16(lv_color_hex(od_themes[mood].ticket)),pet=lv_color_to_u16(lv_color_hex(od_theme_palette(0,mood).pet));
         assert(pixels[40*240+5]==background && pixels[180*240+5]==band);
         int pet_pixels=0;for(int y=151;y<215;y++)for(int x=164;x<219;x++)if(pixels[y*240+x]==pet)pet_pixels++;
         assert(pet_pixels>=100);
