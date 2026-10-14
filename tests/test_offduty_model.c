@@ -48,6 +48,7 @@ int main(void) {
     assert(strstr(phone_html,"class=signature>OFF DUTY CLUB"));
     assert(strstr(phone_html,"action=/scan") && strstr(phone_html,"action=/settings"));
     assert(strstr(phone_html,"data-password=wifi-password") && strstr(phone_html,"data-password=hidden-password"));
+    assert(strstr(phone_html,"name=theme")<strstr(phone_html,"select name=start"));
     assert(strstr(phone_html,"name=theme") && strstr(phone_html,"电光撞色") && strstr(phone_html,"复古彩印") && strstr(phone_html,"果冻透光"));
     assert(strstr(phone_html,"name=eggs") && strstr(phone_html,"name=screen_off") && !strstr(phone_html,"name=idle"));
     assert(strstr(phone_html,"确认忘记网络并关闭热点</button></form></details></section>"));

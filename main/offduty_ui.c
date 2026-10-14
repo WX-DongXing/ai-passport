@@ -109,7 +109,7 @@ static const char *s_wait_mood[]={"困困","绷住","摸鱼","元气","专注","
 static const char *s_wait_copy[]={"再眯一会，到点叫我。","先深呼吸，开工不抢跑。","营业之前，先给自己放风。","快乐攒满，到点出发。","脑袋预热，暂不接单。","先填饱，再开始营业。","此刻只管发会儿呆。","先存体力，到点再冲。"};
 static const char *s_eggs[]={"摸鱼许可证","咖啡补给站","老板雷达","灵魂先下班","快乐预存成功"};
 static const char *s_egg_quote[]={"已批准：钓一条快乐小鱼。","今天的你，值得加一份奶。","别紧张，屏幕在认真工作。","肉身随后就到，请稍等。","今日快乐，正在排队到账。"};
-static const char *s_menu[]={"上班时间","下班时间","准备时间","屏幕亮度","声音大小","熄屏方式","随机彩蛋","连接 Wi-Fi","立即对时","对时状态","忘记网络","主题配色","返回"};
+static const char *s_menu[]={"主题配色","上班时间","下班时间","准备时间","屏幕亮度","声音大小","熄屏方式","随机彩蛋","连接 Wi-Fi","立即对时","对时状态","忘记网络","返回"};
 const char *od_menu_name(int row) { return s_menu[row]; }
 
 static float s_scale=1.f,s_scale_y=1.f;
@@ -598,23 +598,23 @@ static void menu(void) {
         uint32_t row_ink=i==s_view.selected?(s_view.edit?THEME.seal_ink:THEME.block_ink):INK;
         TXT(20,y+7,108,s_menu[i],&od_font_12,row_ink); value[0]=0;
         switch(i) {
-        case 0:clock_text(value,s_view.settings.start_min);break;
-        case 1:clock_text(value,s_view.settings.end_min);break;
-        case 2:clock_text(value,s_view.settings.wait_min);break;
-        case 3:snprintf(value,sizeof(value),"%d%%",s_view.settings.brightness);break;
-        case 4:snprintf(value,sizeof(value),"%d%%",s_view.settings.volume);break;
-        case 5:strcpy(value,(const char *[]){"常亮","1分钟","2分钟","5分钟","10分钟","30分钟"}[od_sleep_choice(&s_view.settings)]);break;
-        case 6:strcpy(value,s_view.settings.random_eggs?"开启":"关闭");break;
-        case 7:strcpy(value,s_view.connected?"已连接":"配网");break;
-        case 8:strcpy(value,s_view.connected?"同步":"离线");break;
-        case 9:strcpy(value,s_view.synced?(s_view.phone_time?"手机校准":s_view.connected?"网络校准":"离线续时"):"等待校准");break;
-        case 11:strcpy(value,od_theme_name(s_view.settings.theme));break;
-        case 10:strcpy(value,s_view.selected==10 && s_view.edit?"确认删除？":"需确认");break;
+        case OD_MENU_START:clock_text(value,s_view.settings.start_min);break;
+        case OD_MENU_END:clock_text(value,s_view.settings.end_min);break;
+        case OD_MENU_WAIT:clock_text(value,s_view.settings.wait_min);break;
+        case OD_MENU_BRIGHTNESS:snprintf(value,sizeof(value),"%d%%",s_view.settings.brightness);break;
+        case OD_MENU_VOLUME:snprintf(value,sizeof(value),"%d%%",s_view.settings.volume);break;
+        case OD_MENU_SLEEP:strcpy(value,(const char *[]){"常亮","1分钟","2分钟","5分钟","10分钟","30分钟"}[od_sleep_choice(&s_view.settings)]);break;
+        case OD_MENU_EGGS:strcpy(value,s_view.settings.random_eggs?"开启":"关闭");break;
+        case OD_MENU_WIFI:strcpy(value,s_view.connected?"已连接":"配网");break;
+        case OD_MENU_SYNC:strcpy(value,s_view.connected?"同步":"离线");break;
+        case OD_MENU_STATUS:strcpy(value,s_view.synced?(s_view.phone_time?"手机校准":s_view.connected?"网络校准":"离线续时"):"等待校准");break;
+        case OD_MENU_THEME:strcpy(value,od_theme_name(s_view.settings.theme));break;
+        case OD_MENU_FORGET:strcpy(value,s_view.selected==OD_MENU_FORGET && s_view.edit?"确认删除？":"需确认");break;
         default:break;
         }
         text(126,y+7,92,value,&od_font_12,row_ink,LV_TEXT_ALIGN_RIGHT);
     }
-    CENTER(8,278,224,s_view.notice==1?"保存失败，请重试":s_view.notice==2?"上下班时间不能相同":s_view.notice==3?"网络启动失败，请重启":s_view.edit?(s_view.selected==10?"OK 确认忘记 / ↑↓ 取消":"↑↓ 调整 · OK 保存"):"↑↓ 选择 · OK 编辑",&od_font_11,INK);
+    CENTER(8,278,224,s_view.notice==1?"保存失败，请重试":s_view.notice==2?"上下班时间不能相同":s_view.notice==3?"网络启动失败，请重启":s_view.edit?(s_view.selected==OD_MENU_FORGET?"OK 确认忘记 / ↑↓ 取消":"↑↓ 调整 · OK 保存"):"↑↓ 选择 · OK 编辑",&od_font_11,INK);
     CENTER(8,303,224,"长按 OK 返回",&od_font_11,INK);
 }
 

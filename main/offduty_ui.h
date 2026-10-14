@@ -26,4 +26,4 @@ typedef struct {
 lv_obj_t *od_ui_create(void);
 void od_ui_update(lv_obj_t *screen, const od_view_t *view);
 const char *od_menu_name(int row);
-#define OD_MENU_ROWS 13
+enum { OD_MENU_THEME, OD_MENU_START, OD_MENU_END, OD_MENU_WAIT, OD_MENU_BRIGHTNESS, OD_MENU_VOLUME, OD_MENU_SLEEP, OD_MENU_EGGS, OD_MENU_WIFI, OD_MENU_SYNC, OD_MENU_STATUS, OD_MENU_FORGET, OD_MENU_RETURN, OD_MENU_ROWS };

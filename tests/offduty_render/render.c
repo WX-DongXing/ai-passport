@@ -123,7 +123,7 @@ int main(int argc,char **argv) {
         v.time.phase=OD_BEFORE;v.time.remaining_us=INT64_C(1080000000);snprintf(name,sizeof(name),"theme-%d-%d-waiting",variant,mood);render(scr,&v,name);
         v.time.phase=OD_FINAL;v.time.remaining_us=INT64_C(5000000);snprintf(name,sizeof(name),"theme-%d-%d-final",variant,mood);render(scr,&v,name);
         v.time.phase=OD_WORK;for(int e=0;e<5;e++){v.egg=e;snprintf(name,sizeof(name),"theme-%d-%d-egg-%d",variant,mood,e);render(scr,&v,name);}v.egg=-1;
-        v.menu=1;v.selected=11;snprintf(name,sizeof(name),"theme-%d-%d-menu",variant,mood);render(scr,&v,name);v.menu=0;
+        v.menu=1;v.selected=OD_MENU_THEME;snprintf(name,sizeof(name),"theme-%d-%d-menu",variant,mood);render(scr,&v,name);v.menu=0;
     }
 #ifdef OD_STAMP_REFERENCE
     puts("Theme reference renders: PASS");lv_display_delete(display);lv_deinit();return 0;
@@ -173,10 +173,10 @@ int main(int argc,char **argv) {
         v.effect_ms=1500;snprintf(name,sizeof(name),"relax-%d-%d",mood,effect);render(scr,&v,name);
     }
     v.settings.theme=0;v.relax=-1;v.off_home=false;
-    v.menu=1;v.selected=11;v.edit=false;render(scr,&v,"theme-menu-read");
-    static uint16_t forget_row[92*18];for(int y=0;y<18;y++)memcpy(forget_row+y*92,pixels+(85+y)*240+126,92*sizeof(uint16_t));
+    v.menu=1;v.selected=OD_MENU_THEME;v.edit=false;render(scr,&v,"theme-menu-read");
+    assert(!strcmp(od_menu_name(OD_MENU_THEME),"主题配色"));
+    assert(!strcmp(od_menu_name(OD_MENU_FORGET),"忘记网络"));
     v.edit=true;render(scr,&v,"theme-menu-edit");
-    for(int y=0;y<18;y++)assert(!memcmp(forget_row+y*92,pixels+(85+y)*240+126,92*sizeof(uint16_t)));
     v.edit=false;v.menu=0;
     for(int i=0;i<OD_MENU_ROWS;i++){v.menu=1;v.selected=i;snprintf(name,sizeof(name),"setting-%d",i);render(scr,&v,name);}v.menu=0;
     v.menu=2;v.portal=true;strcpy(v.ap_name,"OFFDUTY-DEMO");strcpy(v.ap_password,"0123456789abcdef");

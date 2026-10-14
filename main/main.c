@@ -79,9 +79,9 @@ static void audio_worker(void *arg) {
 }
 static void save(void) {
     if(!od_settings_valid(&s_view.settings)) { s_view.notice=2; return; }
-    if(!s_have_nvs || nvs_set_blob(s_nvs,"settings",&s_view.settings,sizeof(s_view.settings))!=ESP_OK || (s_view.selected<2 && nvs_set_u8(s_nvs,"plan",1)!=ESP_OK) || nvs_set_u8(s_nvs,"waitv",1)!=ESP_OK || nvs_commit(s_nvs)!=ESP_OK) { s_view.notice=1; return; }
-    if(s_view.selected<2) s_view.plan_ready=true;
-    if(s_view.selected<2){s_resume_start=s_resume_end=-1;}
+    if(!s_have_nvs || nvs_set_blob(s_nvs,"settings",&s_view.settings,sizeof(s_view.settings))!=ESP_OK || ((s_view.selected==OD_MENU_START || s_view.selected==OD_MENU_END) && nvs_set_u8(s_nvs,"plan",1)!=ESP_OK) || nvs_set_u8(s_nvs,"waitv",1)!=ESP_OK || nvs_commit(s_nvs)!=ESP_OK) { s_view.notice=1; return; }
+    if((s_view.selected==OD_MENU_START || s_view.selected==OD_MENU_END)) s_view.plan_ready=true;
+    if((s_view.selected==OD_MENU_START || s_view.selected==OD_MENU_END)){s_resume_start=s_resume_end=-1;}
     s_saved=s_view.settings; s_view.edit=0; s_view.notice=0;
 }
 static void close_menu(void) {
@@ -90,15 +90,15 @@ static void close_menu(void) {
 }
 static void adjust(int delta) {
     od_settings_t *s=&s_view.settings; int row=s_view.selected;
-    if(row==0) s->start_min=od_shift_step(s->start_min,delta);
-    if(row==1) s->end_min=od_shift_step(s->end_min,delta);
-    if(row==3) {int v=s->brightness+delta*5; s->brightness=v<10?10:v>100?100:v;}
-    if(row==4) {int v=s->volume+delta*5; s->volume=v<0?0:v>100?100:v; play(0);}
-    if(row==5) od_sleep_set(s,(od_sleep_choice(s)+6+delta)%6);
-    if(row==11)s->theme=(s->theme+OD_THEME_COUNT+delta)%OD_THEME_COUNT;
-    if(row==6) s->random_eggs=!s->random_eggs;
-    if(row==2)s->wait_min=od_wait_step(s,delta);
-    if(row<2)od_wait_link(s);
+    if(row==OD_MENU_START) s->start_min=od_shift_step(s->start_min,delta);
+    if(row==OD_MENU_END) s->end_min=od_shift_step(s->end_min,delta);
+    if(row==OD_MENU_BRIGHTNESS) {int v=s->brightness+delta*5; s->brightness=v<10?10:v>100?100:v;}
+    if(row==OD_MENU_VOLUME) {int v=s->volume+delta*5; s->volume=v<0?0:v>100?100:v; play(0);}
+    if(row==OD_MENU_SLEEP) od_sleep_set(s,(od_sleep_choice(s)+6+delta)%6);
+    if(row==OD_MENU_THEME)s->theme=(s->theme+OD_THEME_COUNT+delta)%OD_THEME_COUNT;
+    if(row==OD_MENU_EGGS) s->random_eggs=!s->random_eggs;
+    if(row==OD_MENU_WAIT)s->wait_min=od_wait_step(s,delta);
+    if((row==OD_MENU_START || row==OD_MENU_END))od_wait_link(s);
     s_view.notice=0;
 }
 static void early_exit(void) {
@@ -137,10 +137,10 @@ static void input(const input_event_t *in,int64_t now) {
     }
     if(in->btn==BSP_BTN_OK){s_view.egg=-1;s_view.relax=-1;s_egg_end=now;}
     if(!s_view.menu && od_setup_state(s_view.connected,s_view.synced,s_view.plan_ready)!=OD_READY) {
-        if(in->btn==BSP_BTN_UP) {s_view.menu=1;s_view.selected=7;}
-        else if(in->btn==BSP_BTN_DOWN) {s_view.menu=1;s_view.selected=0;}
-        else if(!s_view.synced) {if(od_net_action(OD_NET_SETUP)){s_portal_seen=false;s_view.selected=0;s_view.menu=2;}else{s_view.menu=1;s_view.selected=7;s_view.notice=3;}}
-        else {s_view.menu=1;s_view.selected=0;}
+        if(in->btn==BSP_BTN_UP) {s_view.menu=1;s_view.selected=OD_MENU_WIFI;}
+        else if(in->btn==BSP_BTN_DOWN) {s_view.menu=1;s_view.selected=OD_MENU_START;}
+        else if(!s_view.synced) {if(od_net_action(OD_NET_SETUP)){s_portal_seen=false;s_view.selected=0;s_view.menu=2;}else{s_view.menu=1;s_view.selected=OD_MENU_WIFI;s_view.notice=3;}}
+        else {s_view.menu=1;s_view.selected=OD_MENU_START;}
         return;
     }
     if(s_view.work_choice && !s_view.menu) {
@@ -165,7 +165,7 @@ static void input(const input_event_t *in,int64_t now) {
                 if(!od_settings_valid(&s_view.settings)){s_view.settings=previous;s_view.notice=2;return;}
                 int64_t cleared[]={0,0};
                 if(!s_have_nvs || nvs_set_blob(s_nvs,"overtime",cleared,sizeof(cleared))!=ESP_OK){s_view.settings=previous;s_view.notice=1;return;}
-                s_view.selected=1;save();s_view.selected=selected;
+                s_view.selected=OD_MENU_END;save();s_view.selected=selected;
                 if(s_view.notice){s_view.settings=previous;return;}
                 memset(s_overtime,0,sizeof(s_overtime));
                 s_resume_start=s_view.utc_us/1000000;s_resume_end=od_resume_end(s_view.utc_us,s_view.resume_end_min);
@@ -195,17 +195,17 @@ static void input(const input_event_t *in,int64_t now) {
     if(s_view.menu==2) {if(in->btn==BSP_BTN_OK) {od_net_action(OD_NET_CLOSE);s_view.menu=1;} return;}
     if(s_view.menu) {
         if(in->btn!=BSP_BTN_OK) {
-            if(s_view.edit && (s_view.selected<7 || s_view.selected==11)) adjust(in->btn==BSP_BTN_UP?1:-1);
+            if(s_view.edit && (s_view.selected<=OD_MENU_EGGS)) adjust(in->btn==BSP_BTN_UP?1:-1);
             else if(!s_view.edit) s_view.selected=(s_view.selected+OD_MENU_ROWS+(in->btn==BSP_BTN_UP?-1:1))%OD_MENU_ROWS;
             else s_view.edit=0;
-        } else if(s_view.selected<7 || s_view.selected==11) { if(s_view.edit) save(); else s_view.edit=1; }
-        else if(s_view.selected==7) { if(od_net_action(OD_NET_SETUP)) {s_portal_seen=false;s_view.selected=0;s_view.menu=2;} else s_view.notice=3; }
-        else if(s_view.selected==8) {if(!od_net_action(OD_NET_SYNC)) s_view.notice=3;}
-        else if(s_view.selected==10) {
+        } else if(s_view.selected<=OD_MENU_EGGS) { if(s_view.edit) save(); else s_view.edit=1; }
+        else if(s_view.selected==OD_MENU_WIFI) { if(od_net_action(OD_NET_SETUP)) {s_portal_seen=false;s_view.selected=0;s_view.menu=2;} else s_view.notice=3; }
+        else if(s_view.selected==OD_MENU_SYNC) {if(!od_net_action(OD_NET_SYNC)) s_view.notice=3;}
+        else if(s_view.selected==OD_MENU_FORGET) {
             if(!s_view.edit) s_view.edit=1;
             else {if(!od_net_action(OD_NET_FORGET)) s_view.notice=3; s_view.edit=0;}
-        } else if(s_view.selected==12) close_menu();
-    } else if(in->btn==BSP_BTN_OK) {s_view.menu=1; s_view.egg=-1;}
+        } else if(s_view.selected==OD_MENU_RETURN) close_menu();
+    } else if(in->btn==BSP_BTN_OK) {s_view.menu=1;s_view.selected=OD_MENU_THEME; s_view.egg=-1;}
     else if(in->btn==BSP_BTN_UP) {s_view.mood=(s_view.mood+1)%8; play(0);}
     else if(s_view.time.phase==OD_WORK) {
         s_view.egg=s_last_egg=od_next_egg(s_last_egg,esp_random()); s_egg_end=now+3000000; s_next_egg=now+900000000; play(1);
@@ -257,7 +257,7 @@ void app_main(void) {
         od_settings_t remote;
         if(od_net_take_settings(&remote)) {
             if((remote.start_min!=s_saved.start_min || remote.end_min!=s_saved.end_min) && remote.wait_min==s_saved.wait_min)od_wait_link(&remote);
-            s_view.settings=remote;int selected=s_view.selected;s_view.selected=0;save();s_view.selected=selected;
+            s_view.settings=remote;int selected=s_view.selected;s_view.selected=OD_MENU_START;save();s_view.selected=selected;
             s_view.feedback=s_view.notice?2:1;s_feedback_at=esp_timer_get_time();
             s_asleep=false;s_activity=s_feedback_at;
         }

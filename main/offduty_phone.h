@@ -111,6 +111,9 @@ static inline bool od_phone_page(od_phone_emit_t emit, void *ctx, const od_setti
     SEND("<details><summary>没找到？手动添加隐藏网络</summary><form method=post action=/wifi><label>网络名称<input name=ssid maxlength=32 required autocomplete=off placeholder='输入 2.4 GHz 网络名称'></label><label for=hidden-password>Wi-Fi 密码</label><div class=password-field><input id=hidden-password name=password type=password maxlength=64 autocomplete=new-password placeholder='开放网络可留空'><button type=button class=secondary data-password=hidden-password aria-controls=hidden-password aria-label=显示密码 aria-pressed=false>显示</button></div>");
     snprintf(html,sizeof(html),"<input type=hidden name=token value='%s'><button>连接此网络 ↗</button></form></details><p class=muted>支持开放、WPA / WPA2 个人网络；不支持 5 GHz 或企业认证。</p></section>",token);SEND(html);
     SEND("</div><section class=card><div class=section-head><span class=index>◷</span><h2>我的下班计划</h2></div><p class=muted>日常作息和设备偏好，一次设置好。</p><form method=post action=/settings>");
+    SEND("<label>主题配色<select name=theme>");
+    for(int i=0;i<OD_THEME_COUNT;i++){snprintf(html,sizeof(html),"<option value=%d %s>%s</option>",i,settings->theme==i?"selected":"",od_theme_name(i));SEND(html);}
+    SEND("</select></label><p class=muted>撞色、彩印、果冻，选一套喜欢的。开机和校时页保持原样。</p>");
     snprintf(html,sizeof(html),"<input type=hidden name=token value='%s'><div class=grid><label>上班时间",token);SEND(html);
     if(!od_phone_time_select(emit,ctx,"start",settings->start_min))return false;
     SEND("</label><label>下班时间");if(!od_phone_time_select(emit,ctx,"end",settings->end_min))return false;
@@ -118,9 +121,6 @@ static inline bool od_phone_page(od_phone_emit_t emit, void *ctx, const od_setti
     if(!od_phone_time_select(emit,ctx,"wait",settings->wait_min))return false;
     SEND("</label><p class=muted>默认提前 1 小时，随作息调整。</p>");
     snprintf(html,sizeof(html),"<p class=subhead>屏幕与声音</p><div class=grid><label>屏幕亮度<span class=unit>%%</span><input name=brightness type=number min=10 max=100 value=%u required></label><label>声音大小<span class=unit>%%</span><input name=volume type=number min=0 max=100 value=%u required></label></div><p class=muted>亮度 10–100%%；音量为 0 时静音。</p>",settings->brightness,settings->volume);SEND(html);
-    SEND("<label>主题配色<select name=theme>");
-    for(int i=0;i<OD_THEME_COUNT;i++){snprintf(html,sizeof(html),"<option value=%d %s>%s</option>",i,settings->theme==i?"selected":"",od_theme_name(i));SEND(html);}
-    SEND("</select></label><p class=muted>撞色、彩印、果冻，选一套喜欢的。开机和校时页保持原样。</p>");
     SEND("<label>熄屏方式<select name=screen_off>");
     const char *modes[]={"常亮","1分钟","2分钟","5分钟","10分钟","30分钟"};
     const unsigned delays[]={0,60,120,300,600,1800};
