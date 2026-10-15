@@ -10,6 +10,22 @@ Keep each asset in the matching subdirectory and document its destination, namin
 
 ## Fonts
 
+Sound Wave uses [`fonts/sound-wave/SoundWaveSans.otf`](fonts/sound-wave/SoundWaveSans.otf),
+a renamed subset of Adobe Source Han Sans CN Medium under the
+[SIL Open Font License](fonts/sound-wave/OFL.txt). Source:
+[Adobe Source Han Sans](https://github.com/adobe-fonts/source-han-sans).
+The [character inventory](fonts/sound-wave/characters.txt) plus ASCII U+0020–007E
+is converted into `sound_font_14.c` and `sound_font_22.c` (4 bpp, uncompressed)
+and compiled by `main/CMakeLists.txt`. Regenerate with:
+
+```bash
+python3 tools/generate_sound_wave_fonts.py --converter /path/to/lv_font_conv.js
+```
+
+The script requires lv_font_conv 1.5.3. Host checks validate generated cmaps and
+bitmap bounds; runtime initialization checks actual LVGL glyph descriptors.
+Physical Chinese rendering still requires device acceptance.
+
 Store reusable font files and generated font sources in `fonts/`.
 
 - Use descriptive names that include the family, weight, size, and format when relevant.

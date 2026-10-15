@@ -8,6 +8,21 @@
 
 ## 字库（fonts）
 
+Sound Wave 使用 [`fonts/sound-wave/SoundWaveSans.otf`](fonts/sound-wave/SoundWaveSans.otf)，
+它是 Adobe Source Han Sans CN Medium 的重命名字体子集，遵循
+[SIL Open Font License](fonts/sound-wave/OFL.txt)。来源：
+[Adobe Source Han Sans](https://github.com/adobe-fonts/source-han-sans)。
+[字符清单](fonts/sound-wave/characters.txt) 加上 ASCII U+0020–007E 转为
+`sound_font_14.c` 和 `sound_font_22.c`（4 bpp、不压缩），由 `main/CMakeLists.txt`
+编译。重新生成：
+
+```bash
+python3 tools/generate_sound_wave_fonts.py --converter /path/to/lv_font_conv.js
+```
+
+脚本要求 lv_font_conv 1.5.3。主机检查生成字体的 cmap 和位图边界，运行时检查
+实际 LVGL 字形描述符。中文实机显示仍需设备验收。
+
 可复用的字库文件与生成的字库源码放在 `fonts/`。
 
 - 命名要能反映字族、字重、字级与格式。

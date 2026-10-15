@@ -36,7 +36,7 @@ void lvgl_port_unlock(void) {
 lv_display_t *lvgl_port_add_disp(const lvgl_port_display_cfg_t *cfg) {
     assert(lock_depth > 0 && cfg->panel_handle == &panel_token && !display_live);
     assert(lvgl_port_lock(0)); // Real port takes and releases a recursive lock.
-    if (!fail_display) display_live = 1;
+    if (!fail_display) { display_live = 1; display.width = cfg->hres; display.height = cfg->vres; }
     lvgl_port_unlock();
     return fail_display ? NULL : &display;
 }
@@ -82,5 +82,12 @@ int main(void) {
     lv_event_t ev = { .target = &display, .area = &area };
     rounded_flush_event(&ev);
     assert(pixels[0] == 0 && pixels[BSP_LCD_W - 1] == 0 && pixels[BSP_LCD_W / 2] == 0xffff);
+    uint16_t landscape[320];
+    for (int x = 0; x < 320; ++x) landscape[x] = 0xffff;
+    display.width = 320; display.height = 240;
+    display.buffer = (lv_draw_buf_t){.data = (uint8_t *)landscape, .header.stride = sizeof(landscape)};
+    area.x2 = 319;
+    rounded_flush_event(&ev);
+    assert(landscape[0] == 0 && landscape[319] == 0 && landscape[160] == 0xffff);
     puts("BSP LVGL initialization tests: PASS");
 }
