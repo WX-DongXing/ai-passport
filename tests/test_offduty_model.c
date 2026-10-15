@@ -322,5 +322,17 @@ int main(void) {
     assert(!od_settings_form("start=09%3A00&end=18%3A00&brightness=75&volume=50&screen_off=61&eggs=1&wait=08%3A00&token=0123456789abcdef0123456789abcdef",&remote,settings_token));
     s.sleep_mode=2;od_sleep_migrate(&s);assert(s.sleep_mode==0 && s.start_min==540 && s.brightness==75);
     s.sleep_mode=1;s.idle_sec=180;od_sleep_migrate(&s);assert(s.idle_sec==300);
+    od_settings_default(&s);
+    assert(s.orientation==0 && s.landscape_style==0);
+    s.theme=2;s.brightness=80;
+    assert(od_settings_blob(&s,offsetof(od_settings_t,orientation),&remote));
+    assert(remote.orientation==0 && remote.landscape_style==0 && remote.theme==2 && remote.brightness==80);
+    s.orientation=1;s.landscape_style=2;
+    assert(od_settings_blob(&s,sizeof(s),&remote) && remote.orientation==1 && remote.landscape_style==2);
+    s.orientation=2;assert(!od_settings_valid(&s));s.orientation=1;s.landscape_style=3;assert(!od_settings_valid(&s));
+    const char *wide="start=09%3A00&end=18%3A00&brightness=75&volume=50&screen_off=0&eggs=1&wait=08%3A00&theme=2&orientation=1&landscape_style=2&token=0123456789abcdef0123456789abcdef";
+    assert(od_settings_form(wide,&remote,settings_token) && remote.orientation==1 && remote.landscape_style==2);
+    char invalid[512];snprintf(invalid,sizeof(invalid),"%s&orientation=0",wide);assert(!od_settings_form(invalid,&remote,settings_token));
+    snprintf(invalid,sizeof(invalid),"%s",wide);char *bad=strstr(invalid,"orientation=1");bad[12]='2';assert(!od_settings_form(invalid,&remote,settings_token));
     puts("Off-duty timing, settings, provisioning boundary and egg tests: PASS");
 }

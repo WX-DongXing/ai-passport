@@ -172,6 +172,11 @@ static esp_err_t submit_settings(httpd_req_t *req) {
         httpd_resp_set_status(req,"400 Bad Request");
         return notice(req,"保存未提交：请检查时间（15 分钟刻度）和数值范围；若页面已过期，请返回设置重新提交。",false);
     }
+    // A cached phone page without the new fields must preserve display preferences.
+    portENTER_CRITICAL(&s_mux);
+    if(!strstr(body,"orientation="))settings.orientation=s_settings.orientation;
+    if(!strstr(body,"landscape_style="))settings.landscape_style=s_settings.landscape_style;
+    portEXIT_CRITICAL(&s_mux);
     portENTER_CRITICAL(&s_mux);
     bool busy=s_settings_pending;if(!busy){s_pending_settings=settings;s_settings_pending=true;s_settings_saved=false;s_save_result=OD_PHONE_SAVING;}
     portEXIT_CRITICAL(&s_mux);

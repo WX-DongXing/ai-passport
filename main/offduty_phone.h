@@ -114,6 +114,11 @@ static inline bool od_phone_page(od_phone_emit_t emit, void *ctx, const od_setti
     SEND("<label>主题配色<select name=theme>");
     for(int i=0;i<OD_THEME_COUNT;i++){snprintf(html,sizeof(html),"<option value=%d %s>%s</option>",i,settings->theme==i?"selected":"",od_theme_name(i));SEND(html);}
     SEND("</select></label><p class=muted>撞色、彩印、果冻，选一套喜欢的。开机和校时页保持原样。</p>");
+    snprintf(html,sizeof(html),"<label>屏幕方向<select name=orientation><option value=0 %s>竖屏</option><option value=1 %s>横屏</option></select></label>",settings->orientation?"":"selected",settings->orientation?"selected":"");SEND(html);
+    SEND("<label>横屏风格<select name=landscape_style>");
+    const char *styles[]={"经典横屏","一笔漫游","自由巨幕"};
+    for(int i=0;i<OD_LANDSCAPE_STYLES;i++){snprintf(html,sizeof(html),"<option value=%d %s>%s</option>",i,settings->landscape_style==i?"selected":"",styles[i]);SEND(html);}
+    SEND("</select></label><p class=muted>横竖切换，倒计时继续。开机页保持竖屏。</p>");
     snprintf(html,sizeof(html),"<input type=hidden name=token value='%s'><div class=grid><label>上班时间",token);SEND(html);
     if(!od_phone_time_select(emit,ctx,"start",settings->start_min))return false;
     SEND("</label><label>下班时间");if(!od_phone_time_select(emit,ctx,"end",settings->end_min))return false;

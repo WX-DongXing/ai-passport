@@ -1,2 +1,2 @@
 #pragma once
-#define OD_APP_VERSION "1.0.1"
+#define OD_APP_VERSION "1.0.2"

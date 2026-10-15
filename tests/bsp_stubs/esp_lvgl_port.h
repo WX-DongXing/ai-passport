@@ -4,7 +4,7 @@
 #include "esp_err.h"
 #include "esp_lcd_types.h"
 typedef struct { uint8_t *data; struct { uint32_t stride; } header; } lv_draw_buf_t;
-typedef struct _lv_display_t { lv_draw_buf_t buffer; } lv_display_t;
+typedef struct _lv_display_t { lv_draw_buf_t buffer; int width,height; } lv_display_t;
 typedef struct { int32_t x1, y1, x2, y2; } lv_area_t;
 typedef struct { lv_display_t *target; lv_area_t *area; } lv_event_t;
 typedef struct { int unused; } lv_event_dsc_t;
@@ -34,3 +34,6 @@ static inline void *lv_event_get_param(lv_event_t *ev) { return ev->area; }
 static inline lv_draw_buf_t *lv_display_get_buf_active(lv_display_t *disp) { return &disp->buffer; }
 static inline int lv_display_get_color_format(lv_display_t *disp) { (void)disp; return LV_COLOR_FORMAT_RGB565; }
 static inline int32_t lv_area_get_width(const lv_area_t *a) { return a->x2 - a->x1 + 1; }
+
+static inline int32_t lv_display_get_horizontal_resolution(lv_display_t *d) { return d->width?d->width:240; }
+static inline int32_t lv_display_get_vertical_resolution(lv_display_t *d) { return d->height?d->height:320; }

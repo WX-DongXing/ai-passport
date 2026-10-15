@@ -8,9 +8,10 @@ typedef struct {
     uint16_t start_min, end_min, sleep_min, idle_sec;
     uint8_t brightness, volume, sleep_mode, random_eggs;
     uint16_t wait_min, theme;
+    uint8_t orientation, landscape_style;
 } od_settings_t;
 
-enum { OD_THEME_COUNT = 3, OD_TIME_STEP_MIN = 15 };
+enum { OD_THEME_COUNT = 3, OD_TIME_STEP_MIN = 15, OD_LANDSCAPE_STYLES = 3 };
 
 typedef enum { OD_WAIT, OD_BEFORE, OD_WORK, OD_FINAL, OD_DONE } od_phase_t;
 typedef struct {

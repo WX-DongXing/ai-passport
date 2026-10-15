@@ -84,6 +84,12 @@ static void save(void) {
     if((s_view.selected==OD_MENU_START || s_view.selected==OD_MENU_END)){s_resume_start=s_resume_end=-1;}
     s_saved=s_view.settings; s_view.edit=0; s_view.notice=0;
 }
+static void toggle_orientation(int64_t now) {
+    od_settings_t changed=s_saved;changed.orientation=!s_view.settings.orientation;
+    bool saved=s_have_nvs && nvs_set_blob(s_nvs,"settings",&changed,sizeof(changed))==ESP_OK && nvs_commit(s_nvs)==ESP_OK;
+    if(saved){s_saved=changed;s_view.settings.orientation=changed.orientation;}
+    s_view.feedback=saved?(changed.orientation?4:5):2;s_feedback_at=now;
+}
 static void close_menu(void) {
     s_view.settings=s_saved; s_view.menu=0; s_view.edit=0; s_view.notice=0;
     if(s_view.portal) od_net_action(OD_NET_CLOSE);
@@ -95,6 +101,8 @@ static void adjust(int delta) {
     if(row==OD_MENU_BRIGHTNESS) {int v=s->brightness+delta*5; s->brightness=v<10?10:v>100?100:v;}
     if(row==OD_MENU_VOLUME) {int v=s->volume+delta*5; s->volume=v<0?0:v>100?100:v; play(0);}
     if(row==OD_MENU_SLEEP) od_sleep_set(s,(od_sleep_choice(s)+6+delta)%6);
+    if(row==OD_MENU_ORIENTATION)s->orientation=!s->orientation;
+    if(row==OD_MENU_LANDSCAPE_STYLE)s->landscape_style=(s->landscape_style+OD_LANDSCAPE_STYLES+delta)%OD_LANDSCAPE_STYLES;
     if(row==OD_MENU_THEME)s->theme=(s->theme+OD_THEME_COUNT+delta)%OD_THEME_COUNT;
     if(row==OD_MENU_EGGS) s->random_eggs=!s->random_eggs;
     if(row==OD_MENU_WAIT)s->wait_min=od_wait_step(s,delta);
@@ -126,13 +134,17 @@ static void input(const input_event_t *in,int64_t now) {
         if(!s_asleep && !s_view.menu && !s_view.resume_picker && !s_view.work_choice && !s_view.early_done && s_view.time.phase==OD_WORK) {s_down_since=in->at_us;s_view.egg=-1;s_activity=now;}
         return;
     }
-    if(event!=BSP_BTN_CLICK && !(event==BSP_BTN_LONG && in->btn==BSP_BTN_OK)) return;
+    if(event!=BSP_BTN_CLICK && !(event==BSP_BTN_LONG && (in->btn==BSP_BTN_OK || in->btn==BSP_BTN_UP))) return;
     s_activity=now;
     if(s_asleep) {s_asleep=false; s_woke_this_day=true; return;}
     if(event==BSP_BTN_LONG) {
-        if(s_view.resume_picker || s_view.work_choice){s_view.resume_picker=false;s_view.work_choice=false;s_view.off_home=true;return;}
-        if(s_view.menu)close_menu();
-        else {s_view.menu=1;s_view.selected=0;s_view.egg=-1;}
+        if(in->btn==BSP_BTN_UP){toggle_orientation(now);return;}
+        if(s_view.menu==1)close_menu();
+        else {
+            if(s_view.resume_picker || s_view.work_choice){s_view.resume_picker=false;s_view.work_choice=false;s_view.off_home=true;}
+            s_view.menu=1;s_view.selected=OD_MENU_ORIENTATION;s_view.edit=0;s_view.notice=0;
+            s_view.egg=-1;s_view.relax=-1;s_egg_end=now;s_down_since=s_down_pressed=-1;s_view.hold_remaining_ms=0;
+        }
         return;
     }
     if(in->btn==BSP_BTN_OK){s_view.egg=-1;s_view.relax=-1;s_egg_end=now;}

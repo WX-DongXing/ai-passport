@@ -19,15 +19,15 @@ static unsigned flushed_pixels;
 static void flush(lv_display_t *display,const lv_area_t *a,uint8_t *map) {
     flushed_pixels+=(a->x2-a->x1+1)*(a->y2-a->y1+1);
     uint16_t *p=(uint16_t *)map;
-    for(int y=a->y1;y<=a->y2;y++) for(int x=a->x1;x<=a->x2;x++) pixels[y*240+x]=*p++;
+    for(int y=a->y1;y<=a->y2;y++) for(int x=a->x1;x<=a->x2;x++) pixels[y*lv_display_get_horizontal_resolution(display)+x]=*p++;
     lv_display_flush_ready(display);
 }
 static void save(const char *name) {
     char path[256];snprintf(path,sizeof(path),"%s.ppm",name);
-    FILE *f=fopen(path,"wb");assert(f);fprintf(f,"P6\n240 320\n255\n");
-    for(int y=0;y<320;y++) for(int x=0;x<240;x++) {
-        int cx=x<30?30:x>=210?209:x, cy=y<30?30:y>=290?289:y;
-        uint16_t c=(x-cx)*(x-cx)+(y-cy)*(y-cy)>900?0:pixels[y*240+x];
+    FILE *f=fopen(path,"wb");assert(f);int width=lv_display_get_horizontal_resolution(lv_display_get_default()),height=lv_display_get_vertical_resolution(lv_display_get_default());fprintf(f,"P6\n%d %d\n255\n",width,height);
+    for(int y=0;y<height;y++) for(int x=0;x<width;x++) {
+        int cx=x<30?30:x>=width-30?width-31:x, cy=y<30?30:y>=height-30?height-31:y;
+        uint16_t c=(x-cx)*(x-cx)+(y-cy)*(y-cy)>900?0:pixels[y*width+x];
         unsigned char rgb[]={((c>>11)&31)*255/31,((c>>5)&63)*255/63,(c&31)*255/31};
         assert(fwrite(rgb,1,3,f)==3);
     }
@@ -37,6 +37,24 @@ static void render(lv_obj_t *scr,od_view_t *view,const char *name) {
     flushed_pixels=0;od_ui_update(scr,view);lv_refr_now(NULL);save(name);
     if(!strncmp(name,"done-",5) && name[strlen(name)-1]!='0')assert(flushed_pixels<5000);
     if(!strcmp(name,"confetti"))assert(flushed_pixels<=57600);
+    if(!strncmp(name,"wide-setting-",13)) {
+        int row_top=66+(view->selected%4)*30;
+        od_theme_t palette=od_theme_palette(view->settings.theme,view->mood);
+        uint16_t ink=lv_color_to_u16(lv_color_hex(view->edit?palette.seal_ink:palette.block_ink));
+        for(int side=0;side<2;side++) {
+            if(side && view->selected==OD_MENU_RETURN)continue;
+            int top=240,bottom=-1;
+            for(int y=row_top+3;y<row_top+23;y++)for(int x=side?206:20;x<(side?298:128);x++)if(pixels[y*320+x]==ink){if(y<top)top=y;if(y>bottom)bottom=y;}
+            if(bottom<top || abs(top+bottom-(2*row_top+25))>2)fprintf(stderr,"Menu center mismatch row=%d side=%d top=%d bottom=%d\n",view->selected,side,top,bottom);
+            assert(bottom>=top && abs(top+bottom-(2*row_top+25))<=2);
+        }
+    }
+    if(!strcmp(name,"wide-resume") || !strcmp(name,"wide-overtime")) {
+        od_theme_t palette=od_theme_palette(view->settings.theme,view->mood);uint16_t ink=lv_color_to_u16(lv_color_hex(view->settings.landscape_style==1?0x263e3b:view->settings.landscape_style==2?0x442b32:palette.block_ink));int top=240,bottom=-1;
+        for(int y=107;y<170;y++)for(int x=45;x<275;x++)if(pixels[y*320+x]==ink){if(y<top)top=y;if(y>bottom)bottom=y;}
+        if(bottom<top || abs(top+bottom-(2*104+68))>2)fprintf(stderr,"Clock centering top=%d bottom=%d\n",top,bottom);
+        assert(bottom>=top && abs(top+bottom-(2*104+68))<=2);
+    }
     if(!strcmp(name,"setting-0"))for(int row=0;row<5;row++)for(int side=0;side<2;side++) {
         int y=74+row*38,top=320,bottom=-1;
         for(int yy=y+3;yy<y+31;yy++)for(int x=side?126:20;x<(side?218:120);x++) {
@@ -188,7 +206,7 @@ int main(int argc,char **argv) {
     assert(pixels[241*240+19]==lv_color_to_u16(lv_color_hex(od_themes[0].accent)));
     for(int y=0;y<123;y++)assert(!memcmp(qr+y*123,pixels+(86+y)*240+58,123*sizeof(uint16_t)));
     static uint16_t before_feedback[240*320];memcpy(before_feedback,pixels,sizeof(pixels));
-    for(int result=1;result<=3;result++) {
+    for(int result=1;result<=5;result++) {
         v.feedback=result;snprintf(name,sizeof(name),"phone-feedback-%d",result);render(scr,&v,name);
         assert(!memcmp(before_feedback,pixels,240*274*sizeof(uint16_t)));
         assert(memcmp(before_feedback+240*274,pixels+240*274,240*46*sizeof(uint16_t)));
@@ -267,5 +285,32 @@ int main(int argc,char **argv) {
     v.connected=false;render(scr,&v,"resumed-offline");
     v.overtime=true;render(scr,&v,"overtime-home");v.time.phase=OD_DONE;render(scr,&v,"overtime-complete");v.overtime=false;
 
+    v=(od_view_t){.mood=0,.egg=-1,.relax=-1,.battery=82,.connected=true,.synced=true,.plan_ready=true,.animation_ms=1200,.confetti_ms=-1};
+    od_settings_default(&v.settings);v.settings.orientation=1;v.utc_us=INT64_C(1791790920000000);v.time=od_time_at(v.utc_us,&v.settings);
+    const int64_t original_end=v.time.end_utc;
+    for(int style=0;style<3;style++)for(int theme=0;theme<3;theme++)for(int mood=0;mood<8;mood++) {
+        v.settings.landscape_style=style;v.settings.theme=theme;v.mood=mood;
+        v.time.phase=OD_WORK;snprintf(name,sizeof(name),"wide-%d-%d-%d-work",style,theme,mood);render(scr,&v,name);
+        assert(lv_display_get_horizontal_resolution(display)==320 && lv_display_get_vertical_resolution(display)==240);
+        for(int e=0;e<5;e++){v.egg=e;snprintf(name,sizeof(name),"wide-%d-%d-%d-egg-%d",style,theme,mood,e);render(scr,&v,name);}v.egg=-1;
+        v.time.phase=OD_FINAL;v.time.remaining_us=5000000;snprintf(name,sizeof(name),"wide-%d-%d-%d-final",style,theme,mood);render(scr,&v,name);
+        v.time.phase=OD_DONE;snprintf(name,sizeof(name),"wide-%d-%d-%d-done",style,theme,mood);render(scr,&v,name);
+        v.confetti_ms=1200;render(scr,&v,"wide-confetti");v.confetti_ms=-1;
+        v.off_home=true;v.free_us=18000000;snprintf(name,sizeof(name),"wide-%d-%d-%d-after",style,theme,mood);render(scr,&v,name);
+        for(int r=0;r<6;r++){v.relax=r;v.effect_ms=1200;snprintf(name,sizeof(name),"wide-%d-%d-%d-relax-%d",style,theme,mood,r);render(scr,&v,name);
+            for(int age=1300;age<=1700;age+=200){v.effect_ms=age;od_ui_update(scr,&v);lv_refr_now(NULL);uint16_t frame[240*320];memcpy(frame,pixels,sizeof(frame));lv_obj_invalidate(scr);lv_refr_now(NULL);if(memcmp(frame,pixels,sizeof(frame))){fprintf(stderr,"Landscape partial mismatch style=%d theme=%d mood=%d relax=%d age=%d\n",style,theme,mood,r,age);assert(!memcmp(frame,pixels,sizeof(frame)));}}
+        }v.relax=-1;v.off_home=false;
+        v.time.phase=OD_BEFORE;v.time.remaining_us=1080000000;render(scr,&v,"wide-wait");
+    }
+    v.menu=1;for(int row=0;row<OD_MENU_ROWS;row++){v.selected=row;snprintf(name,sizeof(name),"wide-setting-%d",row);render(scr,&v,name);}v.menu=0;
+    v.work_choice=true;render(scr,&v,"wide-work-choice");v.work_choice=false;
+    v.resume_picker=true;render(scr,&v,"wide-resume");v.overtime_picker=true;v.overtime_min=30;render(scr,&v,"wide-overtime");v.resume_picker=false;
+    v.hold_remaining_ms=3000;render(scr,&v,"wide-hold");v.hold_remaining_ms=0;
+    v.feedback=1;render(scr,&v,"wide-feedback");v.feedback=0;
+    v.boot=true;v.boot_ms=2999;render(scr,&v,"wide-portrait-boot");assert(lv_display_get_horizontal_resolution(display)==240);v.boot=false;
+    v.synced=false;render(scr,&v,"wide-landscape-calibration");assert(lv_display_get_horizontal_resolution(display)==320);v.synced=true;
+    v.menu=2;v.portal=true;strcpy(v.ap_name,"OFFDUTY-DEMO");strcpy(v.ap_password,"0123456789abcdef");render(scr,&v,"wide-wifi-qr");assert(lv_display_get_horizontal_resolution(display)==320);v.menu=0;
+    v.settings.orientation=0;render(scr,&v,"wide-return-portrait");assert(lv_display_get_horizontal_resolution(display)==240 && v.time.end_utc==original_end);
+    puts("Landscape: 3 styles x 3 themes x 8 moods, effects, settings, rotation transitions: PASS");
     lv_display_delete(display);lv_deinit();puts("UI rendering: PASS");
 }

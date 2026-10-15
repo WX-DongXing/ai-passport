@@ -82,5 +82,10 @@ int main(void) {
     lv_event_t ev = { .target = &display, .area = &area };
     rounded_flush_event(&ev);
     assert(pixels[0] == 0 && pixels[BSP_LCD_W - 1] == 0 && pixels[BSP_LCD_W / 2] == 0xffff);
+    uint16_t wide[320];for(int x=0;x<320;x++)wide[x]=0xffff;
+    display.width=320;display.height=240;
+    display.buffer=(lv_draw_buf_t){.data=(uint8_t *)wide,.header.stride=sizeof(wide)};
+    area=(lv_area_t){0,0,319,0};rounded_flush_event(&ev);
+    assert(wide[0]==0 && wide[319]==0 && wide[160]==0xffff);
     puts("BSP LVGL initialization tests: PASS");
 }
