@@ -762,7 +762,7 @@ static void landscape(void) {
         TXT(17,37,286,after?"OFF DUTY / JUST CHILL":"OFF DUTY / TAKE A BREAK",&od_font_9,INK);
         TXT(17,53,286,after?titles[s_view.relax]:s_eggs[s_view.egg],&od_font_23,INK);
         // Translate only the shared animation artwork, leaving titles and footer fixed.
-        s_offset_x=40;s_offset_y=-53;
+        s_offset_x=40;s_offset_y=after?-65:-53;
         if(after)relax_art(s_view.relax,s_view.effect_ms<0?0:s_view.effect_ms);else egg_art(s_view.egg,s_view.effect_ms<0?0:s_view.effect_ms);
         s_offset_x=s_offset_y=0;
         CENTER(17,184,286,after?quotes[s_view.relax]:s_egg_quote[s_view.egg],&od_font_11,INK);

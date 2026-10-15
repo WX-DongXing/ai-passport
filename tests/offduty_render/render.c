@@ -37,6 +37,11 @@ static void render(lv_obj_t *scr,od_view_t *view,const char *name) {
     flushed_pixels=0;od_ui_update(scr,view);lv_refr_now(NULL);save(name);
     if(!strncmp(name,"done-",5) && name[strlen(name)-1]!='0')assert(flushed_pixels<5000);
     if(!strcmp(name,"confetti"))assert(flushed_pixels<=57600);
+    if(!strncmp(name,"wide-",5) && strstr(name,"-relax-")) {
+        // The blank strip above the caption must remain clear of animation art.
+        for(int y=181;y<184;y++)for(int x=45;x<275;x++)
+            assert(pixels[y*320+x]==pixels[y*320+17]);
+    }
     if(!strncmp(name,"wide-setting-",13)) {
         int row_top=66+(view->selected%4)*30;
         od_theme_t palette=od_theme_palette(view->settings.theme,view->mood);

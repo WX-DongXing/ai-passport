@@ -286,3 +286,6 @@ Version 1.0.2 includes the landscape layouts, global orientation/settings shortc
 
 
 Long-press label removal: all on-screen Hold OK and orientation-switch instructional labels are removed, including continue-work/overtime pickers. Shortcut behavior is unchanged. Existing short-press legends, landscape OK-left order and glyph-centered settings/time values retain their coordinates. Native rendering checks PASS across three styles, three themes and eight moods; inspected portrait/landscape home, settings, time pickers and break images show no remaining label overlap.
+
+
+Landscape relaxation captions: move only relaxation artwork 12 pixels upward, leaving the title, caption, progress rail and button legends fixed. This prevents the sofa, nap cushion and food props from entering the caption area. Break artwork and portrait layouts are unchanged. Native rendering checks include a clear strip above each landscape relaxation caption across all styles, themes and moods.
