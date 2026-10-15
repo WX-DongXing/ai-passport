@@ -740,7 +740,7 @@ static void landscape(void) {
             TXT(27,centered_text_y(y,38,i?"加个班":"继续上班",&od_font_14),86,i?"加个班":"继续上班",&od_font_14,fg);
             TXT(119,centered_text_y(y,38,i?"独立倒计时 · 不改日常作息":"调节下班时间 · 同步到设置",&od_font_9),175,i?"独立倒计时 · 不改日常作息":"调节下班时间 · 同步到设置",&od_font_9,fg);
         }
-        landscape_footer("↑↓ 选择","长按 OK 设置","OK 确认");return;
+        landscape_footer("↑↓ 选择","","OK 确认");return;
     }
     if(s_view.resume_picker) {
         TXT(17,43,286,s_view.overtime_picker?"OVERTIME / EXTRA ROUND":"BACK TO WORK",&od_font_10,INK);
@@ -748,7 +748,7 @@ static void landscape(void) {
         char clock[6];clock_text(clock,s_view.overtime_picker?s_view.overtime_min:s_view.resume_end_min);
         rect(17,104,286,69,THEME.ticket,10,0);CENTER(17,centered_text_y(104,69,clock,&od_digits_35),286,clock,&od_digits_35,THEME.block_ink);
         CENTER(17,185,286,s_view.notice?"保存未完成，请检查设置":s_view.overtime_picker?"加班时长 · 每次调整半小时":"每次调整 15 分钟 · 同步到设置",&od_font_10,INK);
-        landscape_footer("↑↓ 调整","长按 OK 设置","OK 开始");return;
+        landscape_footer("↑↓ 调整","","OK 开始");return;
     }
     if(s_view.hold_remaining_ms>0) {
         TXT(17,43,286,"EARLY EXIT / HOLD",&od_font_10,INK);TXT(17,64,286,"提前下班，即将发射",&od_font_23,INK);
@@ -839,13 +839,6 @@ static void draw(lv_event_t *e) {
     else if(s_view.time.phase==OD_DONE) done();
     else if(s_view.time.phase==OD_BEFORE) waiting();
     else {if(s_view.egg>=0)egg();else home();}
-    if(!s_view.boot){
-        uint32_t shortcut_ink=INK;
-        if(!s_landscape && !s_view.menu && !s_view.off_home && !s_view.early_done && !s_view.hold_remaining_ms && s_view.time.phase==OD_FINAL)
-            shortcut_ink=s_view.time.remaining_us<=10000000?THEME.seal_ink:THEME.block_ink;
-        const char *hint=s_view.menu==1?"长按：OK 返回 · ↑ 横竖屏":"长按：OK 设置 · ↑ 横竖屏";
-        CENTER(17,SCREEN_H-12,SCREEN_W-34,hint,&od_font_9,shortcut_ink);
-    }
     INK=THEME.ink;
     if(s_view.feedback && !s_view.boot) {
         const char *messages[]={"","设置已保存","保存失败，请重试","手机校准完成","横屏已保存","竖屏已保存"};
